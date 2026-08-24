@@ -1,0 +1,48 @@
+name: Refresh performance dashboard
+
+on:
+  schedule:
+    # 00:30 UTC = 06:00 IST, daily
+    - cron: "30 0 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/ecommerce-metrics-dashboard-37cylk
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch latest metrics
+        env:
+          SHOPIFY_STORE_DOMAIN: elan-clothing-r.myshopify.com
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: "1778418969517591"
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+        run: |
+          cd dashboard
+          python3 fetch_metrics.py
+          python3 build.py
+
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- dashboard/data.json dashboard/index.html; then
+            echo "No data changes, skipping commit."
+            exit 0
+          fi
+          git add dashboard/data.json dashboard/index.html
+          git commit -m "Refresh dashboard data ($(date -u +%Y-%m-%d))"
+          git push origin HEAD:claude/ecommerce-metrics-dashboard-37cylk

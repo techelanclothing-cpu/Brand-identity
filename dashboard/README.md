@@ -33,7 +33,33 @@ Elan brand palette and Gilroy typeface, with light/dark mode.
 Just open `index.html` in a browser — double-click it, or `open dashboard/index.html`.
 No build step or server is required to view the current snapshot.
 
-## Refreshing the data
+## Automatic daily refresh (GitHub Action)
+
+`.github/workflows/refresh-dashboard.yml` runs every day at 00:30 UTC (06:00
+IST), pulls fresh data, and commits `dashboard/data.json` + `dashboard/index.html`
+straight to this branch — no manual step, no Claude session involved.
+
+**One-time setup — add two repo secrets** (Settings → Secrets and variables →
+Actions → New repository secret):
+
+| Secret | How to get it |
+|---|---|
+| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin → Settings → Apps and sales channels → Develop apps → Create an app → Configuration → Admin API scopes: enable `read_orders` and `read_analytics` → Install app → API credentials → reveal the Admin API access token (`shpat_...`). |
+| `META_ACCESS_TOKEN` | developers.facebook.com → your app (or Meta Business Suite → Business Settings → System Users) → generate a token with `ads_read` permission for the ad account, ideally a long-lived / system-user token so it doesn't expire every 60 days. |
+
+Once both secrets exist, the workflow runs on its own from the next scheduled
+time — no further action needed. Trigger it manually any time from the
+Actions tab ("Refresh performance dashboard" → Run workflow) to test it or
+force an immediate refresh.
+
+Note: this keeps `dashboard/index.html` in the repo current, but does **not**
+update a separately-published Claude Artifact link — Artifact publishing is a
+Claude-only action. If you want a public URL that reflects this automatic
+refresh (rather than a link someone has to manually re-publish), enable
+GitHub Pages for this repo/branch, or ask Claude to re-publish the Artifact
+whenever you need the latest snapshot shared that way.
+
+## Refreshing the data manually
 
 The dashboard ships with a real snapshot (61 days, 2026-06-25 to 2026-08-24) pulled
 live from the connected Shopify store and Meta Ads account. To pull a fresh snapshot:
