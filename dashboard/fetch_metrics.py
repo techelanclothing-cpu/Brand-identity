@@ -6,7 +6,9 @@ Pulls, per day over the requested window:
   - Shopify ShopifyQL 'sales' dataset: orders, gross_sales, discounts, average_order_value
   - Shopify ShopifyQL 'sessions' dataset: sessions
   - Shopify ShopifyQL 'sales' dataset: net_items_sold (gross quantity)
-  - Shopify Admin GraphQL: order payment_gateway_names, to split COD vs Prepaid
+  - Shopify Admin GraphQL ordersCount: exact per-day order counts by financial
+    status, to split COD vs Prepaid (Paid = Prepaid, Partially Paid = COD —
+    the store collects a token amount online and the balance on delivery)
   - Meta Marketing API insights: amount_spent (ad spend) for the connected ad account
 
 Then rolls the daily rows up into weekly (ISO week) and monthly buckets, computes
@@ -135,51 +137,37 @@ def fetch_sessions(domain, token, days_back):
     return {r["day"][:10]: r for r in rows}
 
 
-def fetch_cod_split(domain, token, days_back, page_limit=10):
-    """Paginate recent orders and compute COD vs prepaid share by day, from
-    Order.paymentGatewayNames. Stops after page_limit pages (default 1000 orders)
-    or once orders older than the window are reached, whichever comes first."""
-    cutoff = (datetime.date.today() - datetime.timedelta(days=days_back)).isoformat()
-    by_day = {}  # date -> {"cod": n, "prepaid": n, "cod_value": x, "prepaid_value": x}
-    cursor = None
-    query = """
-    query Orders($cursor: String) {
-      orders(first: 100, sortKey: CREATED_AT, reverse: true, after: $cursor) {
-        pageInfo { hasNextPage endCursor }
-        edges {
-          node {
-            createdAt
-            paymentGatewayNames
-            totalPriceSet { shopMoney { amount } }
-          }
-        }
-      }
-    }
-    """
-    for _ in range(page_limit):
-        data = shopify_graphql(domain, token, query, {"cursor": cursor})
-        edges = data["orders"]["edges"]
-        stop = False
-        for e in edges:
-            node = e["node"]
-            day = node["createdAt"][:10]
-            if day < cutoff:
-                stop = True
-                continue
-            amount = float(node["totalPriceSet"]["shopMoney"]["amount"])
-            if amount <= 0:
-                continue
-            is_cod = "Cash on Delivery (COD)" in (node["paymentGatewayNames"] or [])
-            bucket = by_day.setdefault(day, {"cod": 0, "prepaid": 0, "cod_value": 0.0, "prepaid_value": 0.0})
-            if is_cod:
-                bucket["cod"] += 1
-                bucket["cod_value"] += amount
-            else:
-                bucket["prepaid"] += 1
-                bucket["prepaid_value"] += amount
-        if stop or not data["orders"]["pageInfo"]["hasNextPage"]:
-            break
-        cursor = data["orders"]["pageInfo"]["endCursor"]
+def fetch_cod_split(domain, token, days_back):
+    """Per-day COD vs Prepaid order counts, classified from Shopify's own
+    financial status (per the store owner: Paid = Prepaid, Partially Paid =
+    COD — a token amount is collected online at checkout and the balance is
+    paid on delivery). Uses one GraphQL request with an aliased ordersCount
+    field per day/status instead of paginating raw orders, which is both
+    faster and exact (no per-page sampling)."""
+    today = datetime.date.today()
+    start = today - datetime.timedelta(days=days_back - 1)
+    by_day = {}
+    days = [start + datetime.timedelta(days=i) for i in range((today - start).days + 1)]
+    for chunk_start in range(0, len(days), 15):
+        chunk = days[chunk_start:chunk_start + 15]
+        parts = []
+        for d in chunk:
+            d0, d1 = d.isoformat(), (d + datetime.timedelta(days=1)).isoformat()
+            key = d.isoformat().replace("-", "_")
+            parts.append(
+                f'p_{key}: ordersCount(query: "created_at:>=\'{d0}T00:00:00Z\' '
+                f"created_at:<'{d1}T00:00:00Z' financial_status:paid\") {{ count }}"
+            )
+            parts.append(
+                f'pp_{key}: ordersCount(query: "created_at:>=\'{d0}T00:00:00Z\' '
+                f"created_at:<'{d1}T00:00:00Z' financial_status:partially_paid\") {{ count }}"
+            )
+        data = shopify_graphql(domain, token, "query {\n  " + "\n  ".join(parts) + "\n}")
+        for d in chunk:
+            key = d.isoformat().replace("-", "_")
+            paid = data[f"p_{key}"]["count"]
+            partially_paid = data[f"pp_{key}"]["count"]
+            by_day[d.isoformat()] = {"cod": partially_paid, "prepaid": paid}
     return by_day
 
 
@@ -221,13 +209,10 @@ def build_daily(sales, sessions, items_by_day, adspend, cod_by_day):
         conv = (orders / sess * 100) if sess else 0
         roas = (revenue / spend) if spend else None
 
-        cod = cod_by_day.get(day, {"cod": 0, "prepaid": 0, "cod_value": 0.0, "prepaid_value": 0.0})
-        total_orders_sample = cod["cod"] + cod["prepaid"]
-        total_value_sample = cod["cod_value"] + cod["prepaid_value"]
-        cod_order_pct = (cod["cod"] / total_orders_sample * 100) if total_orders_sample else 0
-        prepaid_order_pct = 100 - cod_order_pct if total_orders_sample else 0
-        cod_value_pct = (cod["cod_value"] / total_value_sample * 100) if total_value_sample else 0
-        prepaid_value_pct = 100 - cod_value_pct if total_value_sample else 0
+        cod = cod_by_day.get(day, {"cod": 0, "prepaid": 0})
+        classified = cod["cod"] + cod["prepaid"]
+        cod_order_pct = (cod["cod"] / classified * 100) if classified else 0
+        prepaid_order_pct = (cod["prepaid"] / classified * 100) if classified else 0
 
         days.append({
             "date": day, "orders": orders, "gross_sales": round(gross_sales, 2),
@@ -235,8 +220,8 @@ def build_daily(sales, sessions, items_by_day, adspend, cod_by_day):
             "sessions": sess, "conversion_rate": round(conv, 3), "aov": round(aov, 2),
             "ad_spend": round(spend, 2), "roas": round(roas, 2) if roas is not None else None,
             "discount_pct": round(discount_pct, 2),
+            "cod_orders": cod["cod"], "prepaid_orders": cod["prepaid"],
             "cod_order_pct": round(cod_order_pct, 1), "prepaid_order_pct": round(prepaid_order_pct, 1),
-            "cod_value_pct": round(cod_value_pct, 1), "prepaid_value_pct": round(prepaid_value_pct, 1),
         })
     return days
 
@@ -253,16 +238,18 @@ def agg(rows):
     conv = (orders / sess * 100) if sess else 0
     discount_pct = (discounts / gross_sales * 100) if gross_sales else 0
     roas = (revenue / spend) if spend else None
-    cod_orders = sum(r["orders"] * r["cod_order_pct"] / 100 for r in rows)
-    cod_order_pct = (cod_orders / orders * 100) if orders else 0
+    cod_orders = sum(r["cod_orders"] for r in rows)
+    prepaid_orders = sum(r["prepaid_orders"] for r in rows)
+    classified = cod_orders + prepaid_orders
+    cod_order_pct = (cod_orders / classified * 100) if classified else 0
+    prepaid_order_pct = (prepaid_orders / classified * 100) if classified else 0
     return {
         "orders": orders, "gross_sales": round(gross_sales, 2), "discounts": round(discounts, 2),
         "revenue": round(revenue, 2), "quantity": qty, "sessions": sess,
         "conversion_rate": round(conv, 3), "aov": round(aov, 2), "ad_spend": round(spend, 2),
         "roas": round(roas, 2) if roas is not None else None, "discount_pct": round(discount_pct, 2),
-        "cod_order_pct": round(cod_order_pct, 1), "prepaid_order_pct": round(100 - cod_order_pct, 1),
-        "cod_value_pct": round(sum(r["cod_value_pct"] for r in rows) / len(rows), 1),
-        "prepaid_value_pct": round(sum(r["prepaid_value_pct"] for r in rows) / len(rows), 1),
+        "cod_orders": cod_orders, "prepaid_orders": prepaid_orders,
+        "cod_order_pct": round(cod_order_pct, 1), "prepaid_order_pct": round(prepaid_order_pct, 1),
     }
 
 
@@ -310,7 +297,7 @@ def main():
     sales = fetch_sales(domain, token, days_back)
     sessions = fetch_sessions(domain, token, days_back)
 
-    print("Fetching payment gateway split (paginated orders, may take a moment)...")
+    print("Fetching COD/Prepaid split by financial status...")
     cod_by_day = fetch_cod_split(domain, token, days_back)
 
     print("Fetching Meta Ads spend...")
@@ -330,7 +317,7 @@ def main():
                 "Quantity uses Shopify's net_items_sold metric (units sold, net of returns) for the period.",
                 "Ad Spend and ROAS input revenue come from the connected Meta Ads account.",
                 "ROAS = Revenue (Gross Sales - Discounts) / Meta Ad Spend for the same period. Days with zero ad spend show ROAS as not applicable.",
-                "COD vs Prepaid split is computed per day from each order's payment gateway names (Cash on Delivery (COD) vs online gateways), then rolled up into weekly/monthly averages.",
+                "COD vs Prepaid is classified per order from Shopify's financial status: Paid = Prepaid, Partially Paid = COD (a token amount collected online, balance on delivery). Orders in other states (pending, refunded, voided) aren't counted in the split. Computed per day from exact order counts, then rolled up into weekly/monthly totals.",
             ],
         },
         "daily": daily,

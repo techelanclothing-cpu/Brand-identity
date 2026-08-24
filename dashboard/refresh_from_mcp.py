@@ -6,10 +6,30 @@ Meta Ads connector) — no API tokens required, unlike fetch_metrics.py which
 talks to the raw HTTP APIs directly.
 
 This is the script the scheduled "refresh the dashboard" Routine uses: a
-fresh Claude session calls the MCP tools listed below, dumps each raw result
-to a JSON file, then runs this script to turn those dumps into data.json.
+Claude session calls the MCP tools listed below, dumps each raw result to a
+JSON file, then runs this script to turn those dumps into data.json.
 
-Required input files (paths passed as CLI args, see --help):
+Two subcommands:
+
+  gen-cod-query   Prints the GraphQL query text(s) needed for the COD/Prepaid
+                  split, chunked into batches of 15 days each (Shopify's
+                  ordersCount is called once per day per financial status via
+                  aliases, so one call covers many days at once — a 60-day
+                  window needs only ~4 chunks/calls, not one per order page).
+
+  build           Builds data.json from the raw tool outputs.
+
+--- gen-cod-query ---
+
+  python3 refresh_from_mcp.py gen-cod-query --days-back 60
+
+Prints N query strings, one per chunk, separated by a line of "---". Run each
+through mcp__Shopify__graphql_query and save each raw JSON result to its own
+file (see "COD/Prepaid classification" below for what the fields mean).
+
+--- build ---
+
+Required input files (paths passed as CLI args):
 
 1. --sales <path>
    Raw output of mcp__Shopify__run-analytics-query for:
@@ -28,18 +48,16 @@ Required input files (paths passed as CLI args, see --help):
    time_range={"since": <60 days ago>, "until": today}, time_increment="1".
    Verbatim shape: {"ad_entities": "[{...}, ...]"} (a JSON-encoded string).
 
-4. --orders <path> [<path> ...] (one or more, for pagination)
-   Raw output(s) of mcp__Shopify__graphql_query for:
-     query Orders($cursor: String) {
-       orders(first: 100, sortKey: CREATED_AT, reverse: true, after: $cursor) {
-         pageInfo { hasNextPage endCursor }
-         edges { node { createdAt paymentGatewayNames
-                         totalPriceSet { shopMoney { amount } } } }
-       }
-     }
-   Paginate with the returned endCursor until hasNextPage is false or orders
-   older than the window are reached (~60 days = roughly 3-8 pages depending
-   on order volume). Pass every page's raw JSON as a separate --orders arg.
+4. --cod-counts <path> [<path> ...] (one per chunk from gen-cod-query)
+   Raw output(s) of mcp__Shopify__graphql_query for each query chunk printed
+   by `gen-cod-query`. Verbatim shape:
+     {"data": {"p_2026_08_24": {"count": 13}, "pp_2026_08_24": {"count": 3}, ...}}
+
+COD/Prepaid classification: per the store owner, Shopify's order financial
+status maps directly to how the order was paid — "Paid" (p_ alias) means
+Prepaid (paid in full online at checkout), "Partially Paid" (pp_ alias) means
+COD (a token amount collected online, balance due on delivery). Other
+statuses (pending, refunded, voided, ...) aren't counted in the split.
 
 Output: writes dashboard/data.json (same shape fetch_metrics.py writes).
 Run `python3 build.py` afterwards to embed it into index.html.
@@ -95,49 +113,64 @@ def parse_adspend(raw):
     return out
 
 
-def parse_cod_split(raw_pages, days_back):
-    cutoff = (datetime.date.today() - datetime.timedelta(days=days_back)).isoformat()
+def cod_query_chunks(days_back, chunk_size=15):
+    """Yield GraphQL query strings, each covering up to chunk_size days of
+    aliased ordersCount(financial_status:paid) / ordersCount(financial_status:
+    partially_paid) fields. See module docstring for why this beats paginating
+    raw orders: one request classifies many days at once."""
+    today = datetime.date.today()
+    start = today - datetime.timedelta(days=days_back - 1)
+    days = [start + datetime.timedelta(days=i) for i in range((today - start).days + 1)]
+    for i in range(0, len(days), chunk_size):
+        chunk = days[i:i + chunk_size]
+        parts = []
+        for d in chunk:
+            d0, d1 = d.isoformat(), (d + datetime.timedelta(days=1)).isoformat()
+            key = d.isoformat().replace("-", "_")
+            parts.append(
+                f'p_{key}: ordersCount(query: "created_at:>=\'{d0}T00:00:00Z\' '
+                f"created_at:<'{d1}T00:00:00Z' financial_status:paid\") {{ count }}"
+            )
+            parts.append(
+                f'pp_{key}: ordersCount(query: "created_at:>=\'{d0}T00:00:00Z\' '
+                f"created_at:<'{d1}T00:00:00Z' financial_status:partially_paid\") {{ count }}"
+            )
+        yield "query {\n  " + "\n  ".join(parts) + "\n}"
+
+
+def parse_cod_counts(raw_chunks):
+    """raw_chunks: list of {"data": {"p_YYYY_MM_DD": {"count": n}, "pp_YYYY_MM_DD": {"count": n}, ...}}
+    -> {"YYYY-MM-DD": {"cod": n, "prepaid": n}}"""
     by_day = {}
-    for raw in raw_pages:
-        edges = raw["data"]["orders"]["edges"]
-        for e in edges:
-            node = e["node"]
-            day = node["createdAt"][:10]
-            if day < cutoff:
-                continue
-            amount = float(node["totalPriceSet"]["shopMoney"]["amount"])
-            if amount <= 0:
-                continue
-            is_cod = "Cash on Delivery (COD)" in (node["paymentGatewayNames"] or [])
-            bucket = by_day.setdefault(day, {"cod": 0, "prepaid": 0, "cod_value": 0.0, "prepaid_value": 0.0})
-            if is_cod:
-                bucket["cod"] += 1
-                bucket["cod_value"] += amount
-            else:
-                bucket["prepaid"] += 1
-                bucket["prepaid_value"] += amount
+    for raw in raw_chunks:
+        data = raw["data"]
+        for alias, val in data.items():
+            prefix, datekey = alias.split("_", 1)
+            day = datekey.replace("_", "-")
+            bucket = by_day.setdefault(day, {"cod": 0, "prepaid": 0})
+            if prefix == "p":
+                bucket["prepaid"] = val["count"]
+            elif prefix == "pp":
+                bucket["cod"] = val["count"]
     return by_day
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--sales", required=True)
-    ap.add_argument("--sessions", required=True)
-    ap.add_argument("--adspend", required=True)
-    ap.add_argument("--orders", required=True, nargs="+")
-    ap.add_argument("--days-back", type=int, default=60)
-    ap.add_argument("--shop", default="Elan Clothing (elanclothing.in)")
-    args = ap.parse_args()
+def cmd_gen_cod_query(args):
+    chunks = list(cod_query_chunks(args.days_back, args.chunk_days))
+    print(f"\n--- {len(chunks)} queries, ~{args.chunk_days} days each ---\n", file=sys.stderr)
+    print(("\n" + "-" * 3 + "\n").join(chunks))
 
+
+def cmd_build(args):
     sales_raw = json.loads(Path(args.sales).read_text())
     sessions_raw = json.loads(Path(args.sessions).read_text())
     adspend_raw = json.loads(Path(args.adspend).read_text())
-    orders_raw = [json.loads(Path(p).read_text()) for p in args.orders]
+    cod_raw = [json.loads(Path(p).read_text()) for p in args.cod_counts]
 
     sales = index_by_day(parse_shopifyql(sales_raw))
     sessions = index_by_day(parse_shopifyql(sessions_raw))
     adspend = parse_adspend(adspend_raw)
-    cod_by_day = parse_cod_split(orders_raw, args.days_back)
+    cod_by_day = parse_cod_counts(cod_raw)
 
     daily = build_daily(sales, sessions, {}, adspend, cod_by_day)
     if not daily:
@@ -156,7 +189,7 @@ def main():
                 "Quantity uses Shopify's net_items_sold metric (units sold, net of returns) for the period.",
                 "Ad Spend and ROAS input revenue come from the connected Meta Ads account.",
                 "ROAS = Revenue (Gross Sales - Discounts) / Meta Ad Spend for the same period. Days with zero ad spend show ROAS as not applicable.",
-                "COD vs Prepaid split is computed per day from each order's payment gateway names (Cash on Delivery (COD) vs online gateways), then rolled up into weekly/monthly averages.",
+                "COD vs Prepaid is classified per order from Shopify's financial status: Paid = Prepaid, Partially Paid = COD (a token amount collected online, balance on delivery). Orders in other states (pending, refunded, voided) aren't counted in the split. Computed per day from exact order counts, then rolled up into weekly/monthly totals.",
             ],
         },
         "daily": daily,
@@ -168,6 +201,27 @@ def main():
     out_path.write_text(json.dumps(output, indent=2))
     print(f"Wrote {out_path} ({len(daily)} days, {len(weekly)} weeks, {len(monthly)} months)")
     print("Run `python3 build.py` next to embed the refreshed data into index.html.")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="command", required=True)
+
+    gq = sub.add_parser("gen-cod-query", help="Print the ordersCount query chunks for the COD/Prepaid split")
+    gq.add_argument("--days-back", type=int, default=60)
+    gq.add_argument("--chunk-days", type=int, default=15)
+    gq.set_defaults(func=cmd_gen_cod_query)
+
+    bd = sub.add_parser("build", help="Build data.json from the raw MCP tool outputs")
+    bd.add_argument("--sales", required=True)
+    bd.add_argument("--sessions", required=True)
+    bd.add_argument("--adspend", required=True)
+    bd.add_argument("--cod-counts", required=True, nargs="+")
+    bd.add_argument("--shop", default="Elan Clothing (elanclothing.in)")
+    bd.set_defaults(func=cmd_build)
+
+    args = ap.parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":

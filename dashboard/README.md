@@ -9,14 +9,17 @@ Daily / Weekly / Monthly views of:
 - Conversion %
 - AOV
 - Revenue (Gross Sale − Discount)
+- Ad Spend
 - ROAS (Revenue / Ad Spend)
 - Discount %
 - Total Sessions
-- COD vs. Prepaid order split (by order count and by value)
+- COD vs. Prepaid order split
 
-plus a Revenue-vs-Ad-Spend trend chart, Orders and Sessions trend charts, a
-COD/Prepaid breakdown, and a full sortable-by-period data table — all in the
-Elan brand palette and Gilroy typeface, with light/dark mode.
+plus a **Compare periods** panel (pick any two custom date ranges and see
+every metric side by side with a % delta — clearer than reading it off a
+trend line), a Revenue-vs-Ad-Spend trend chart, Orders and Sessions trend
+charts, a COD/Prepaid breakdown, and a full sortable-by-period data table —
+all in the Elan brand palette and Gilroy typeface, with light/dark mode.
 
 ## Files
 
@@ -115,21 +118,26 @@ builds the same `data.json` from the Shopify and Meta Ads **MCP connector**
 tools available inside a Claude session instead:
 
 1. Call `mcp__Shopify__run-analytics-query` for the sales and sessions
-   ShopifyQL queries, `mcp__Meta_ads__ads_get_ad_entities` for ad spend, and
-   `mcp__Shopify__graphql_query` (paginated) for order payment gateways —
+   ShopifyQL queries, and `mcp__Meta_ads__ads_get_ad_entities` for ad spend —
    exact queries are documented in the docstring at the top of the script.
-2. Dump each raw tool result to a JSON file.
-3. Run:
+2. For the COD/Prepaid split, run `python3 refresh_from_mcp.py gen-cod-query
+   --days-back 60` to print the GraphQL query text (chunked into ~15-day
+   batches), call `mcp__Shopify__graphql_query` with each chunk, and save
+   each raw result to its own file.
+3. Dump every raw tool result to a JSON file, then run:
    ```bash
-   python3 refresh_from_mcp.py --sales sales.json --sessions sessions.json \
-     --adspend adspend.json --orders orders_p1.json orders_p2.json ...
+   python3 refresh_from_mcp.py build --sales sales.json --sessions sessions.json \
+     --adspend adspend.json --cod-counts cod_chunk1.json cod_chunk2.json ...
    python3 build.py
    ```
 
 This is what the scheduled "refresh the Elan dashboard" Claude Routine does
 daily — it re-runs those MCP calls, rebuilds `data.json`, commits and pushes
 `dashboard/index.html` + `dashboard/data.json`, and republishes the dashboard
-Artifact.
+Artifact. It's bound to a specific Claude session that already has the
+Shopify/Meta Ads connectors authorized (not a fresh session per run) — this
+org has connector-passing to fresh scheduled sessions disabled, so binding to
+an existing authorized session is what makes this work without a Shopify app.
 
 ## How each metric is computed
 
@@ -143,12 +151,15 @@ Artifact.
 - **Discount %** — `Discounts / Gross Sale × 100`.
 - **Ad Spend / ROAS** — Meta Marketing API `spend` for the connected ad account;
   `ROAS = Revenue / Ad Spend`. Shown as "—" for periods with no ad spend.
-- **COD vs. Prepaid split** — each order's `paymentGatewayNames` from the
-  Shopify Admin API: an order is COD if it includes `"Cash on Delivery (COD)"`,
-  otherwise it's counted as Prepaid (Razorpay, Shopflo, cards, UPI, wallets,
-  etc). Computed both by order count and by order value, then rolled up into
-  weekly/monthly averages. `fetch_metrics.py` computes this per day by
-  paginating recent orders — see `fetch_cod_split()`.
+- **COD vs. Prepaid split** — classified per order from Shopify's own
+  financial status: **Paid → Prepaid** (paid in full online at checkout),
+  **Partially Paid → COD** (a token amount collected online, balance due on
+  delivery — how this store's COD flow works). Orders in other states
+  (pending, refunded, voided, ...) aren't counted in the split. Computed
+  exactly per day (not sampled) via one aliased `ordersCount` GraphQL query
+  per ~15-day batch — see `fetch_cod_split()` in `fetch_metrics.py` and
+  `cod_query_chunks()` / `parse_cod_counts()` in `refresh_from_mcp.py` —
+  then rolled up into weekly/monthly totals.
 - **Weekly** buckets are ISO weeks (Monday–Sunday). **Monthly** buckets are
   calendar months. A period at the edge of the pulled date range that doesn't
   have a full week/month of data is flagged "(partial)" in the dashboard and
