@@ -1,9 +1,13 @@
 name: Refresh performance dashboard
 
+# Schedule disabled: this requires a Shopify custom app (SHOPIFY_CLIENT_ID /
+# SHOPIFY_CLIENT_SECRET) that installation kept failing ("This installation
+# link can't be used"). Daily refresh now runs via a Claude Routine instead
+# (reuses the Shopify/Meta Ads connectors already authorized in-session, no
+# app install needed). Re-enable the schedule below if you get a working
+# Shopify app set up later — this workflow still works manually via
+# workflow_dispatch once the two secrets exist.
 on:
-  schedule:
-    # 00:30 UTC = 06:00 IST, daily
-    - cron: "30 0 * * *"
   workflow_dispatch: {}
 
 permissions:
