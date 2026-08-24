@@ -26,6 +26,7 @@ Elan brand palette and Gilroy typeface, with light/dark mode.
 | `data.json` | The metrics data, in the shape `index.html` reads. Source of truth after a refresh. |
 | `fetch_metrics.py` | Pulls fresh data from Shopify (Admin GraphQL / ShopifyQL) and Meta Ads (Marketing API), and writes `data.json`. |
 | `build.py` | Embeds the current `data.json` into `index.html`'s inline `<script id="dashboard-data">` block. |
+| `refresh_from_mcp.py` | Alternative to `fetch_metrics.py` — builds `data.json` from raw MCP tool output (Shopify/Meta Ads connectors inside a Claude session) instead of raw HTTP API tokens. Used by the scheduled Claude Routine that keeps the dashboard current; see below. |
 
 ## Viewing it
 
@@ -51,6 +52,29 @@ python3 build.py           # embeds data.json into index.html
 
 Re-run this pair on a schedule (cron, GitHub Action, etc.) to keep the dashboard
 current — commit the refreshed `index.html` and `data.json` afterwards.
+
+### Refreshing without API tokens (Claude session / Routine)
+
+If you don't want to manage raw Shopify/Meta API tokens, `refresh_from_mcp.py`
+builds the same `data.json` from the Shopify and Meta Ads **MCP connector**
+tools available inside a Claude session instead:
+
+1. Call `mcp__Shopify__run-analytics-query` for the sales and sessions
+   ShopifyQL queries, `mcp__Meta_ads__ads_get_ad_entities` for ad spend, and
+   `mcp__Shopify__graphql_query` (paginated) for order payment gateways —
+   exact queries are documented in the docstring at the top of the script.
+2. Dump each raw tool result to a JSON file.
+3. Run:
+   ```bash
+   python3 refresh_from_mcp.py --sales sales.json --sessions sessions.json \
+     --adspend adspend.json --orders orders_p1.json orders_p2.json ...
+   python3 build.py
+   ```
+
+This is what the scheduled "refresh the Elan dashboard" Claude Routine does
+daily — it re-runs those MCP calls, rebuilds `data.json`, commits and pushes
+`dashboard/index.html` + `dashboard/data.json`, and republishes the dashboard
+Artifact.
 
 ## How each metric is computed
 
