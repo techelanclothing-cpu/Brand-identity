@@ -70,7 +70,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from fetch_metrics import build_daily, rollup  # noqa: E402
+from fetch_metrics import build_daily, rollup, merge_daily, load_existing_daily  # noqa: E402
 
 DATA_TYPE_CASTERS = {
     "INTEGER": lambda v: int(v) if v not in (None, "") else 0,
@@ -172,12 +172,17 @@ def cmd_build(args):
     adspend = parse_adspend(adspend_raw)
     cod_by_day = parse_cod_counts(cod_raw)
 
-    daily = build_daily(sales, sessions, {}, adspend, cod_by_day)
-    if not daily:
+    fresh_daily = build_daily(sales, sessions, {}, adspend, cod_by_day)
+    if not fresh_daily:
         print("No daily rows produced — check input files.", file=sys.stderr)
         sys.exit(1)
+
+    out_path = Path(__file__).parent / "data.json"
+    existing_daily = load_existing_daily(out_path)
+    daily = merge_daily(existing_daily, fresh_daily)
     weekly, monthly = rollup(daily)
 
+    days_back = len(fresh_daily)
     output = {
         "meta": {
             "shop": args.shop,
@@ -190,6 +195,7 @@ def cmd_build(args):
                 "Ad Spend and ROAS input revenue come from the connected Meta Ads account.",
                 "ROAS = Revenue (Gross Sales - Discounts) / Meta Ad Spend for the same period. Days with zero ad spend show ROAS as not applicable.",
                 "COD vs Prepaid is classified per order from Shopify's financial status: Paid = Prepaid, Partially Paid = COD (a token amount collected online, balance on delivery). Orders in other states (pending, refunded, voided) aren't counted in the split. Computed per day from exact order counts, then rolled up into weekly/monthly totals.",
+                f"This is a growing archive, not a rolling window: each refresh re-syncs the last {days_back} days (to catch refunds/edits to recent orders) and keeps every earlier day untouched, so history accumulates for as long as the dashboard has been refreshed.",
             ],
         },
         "daily": daily,
@@ -197,9 +203,12 @@ def cmd_build(args):
         "monthly": monthly,
     }
 
-    out_path = Path(__file__).parent / "data.json"
     out_path.write_text(json.dumps(output, indent=2))
-    print(f"Wrote {out_path} ({len(daily)} days, {len(weekly)} weeks, {len(monthly)} months)")
+    new_days = len(daily) - len(existing_daily)
+    print(
+        f"Wrote {out_path}: {len(daily)} days total in archive "
+        f"({new_days:+d} vs previous run), {len(weekly)} weeks, {len(monthly)} months"
+    )
     print("Run `python3 build.py` next to embed the refreshed data into index.html.")
 
 

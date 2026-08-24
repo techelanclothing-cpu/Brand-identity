@@ -12,7 +12,8 @@
       "Quantity uses Shopify's net_items_sold metric (units sold, net of returns) for the period.",
       "Ad Spend and ROAS input revenue come from the connected Meta Ads account '#2 Elan Clothing Retai' (account id 1778418969517591).",
       "ROAS = Revenue (Gross Sales - Discounts) / Meta Ad Spend for the same period. Days with zero ad spend show ROAS as not applicable.",
-      "COD vs Prepaid is classified per order from Shopify's financial status: Paid = Prepaid, Partially Paid = COD (a token amount collected online, balance on delivery). Orders in other states (pending, refunded, voided) aren't counted in the split. Computed per day from exact order counts, then rolled up into weekly/monthly totals."
+      "COD vs Prepaid is classified per order from Shopify's financial status: Paid = Prepaid, Partially Paid = COD (a token amount collected online, balance on delivery). Orders in other states (pending, refunded, voided) aren't counted in the split. Computed per day from exact order counts, then rolled up into weekly/monthly totals.",
+      "This is a growing archive, not a rolling window: each refresh re-syncs the last 60 days (to catch refunds/edits to recent orders) and keeps every earlier day untouched, so history accumulates for as long as the dashboard has been refreshed."
     ]
   },
   "daily": [

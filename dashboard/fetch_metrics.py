@@ -46,6 +46,7 @@ import datetime
 import urllib.request
 import urllib.parse
 import urllib.error
+from pathlib import Path
 
 SHOPIFY_API_VERSION = "2025-01"
 
@@ -282,6 +283,29 @@ def rollup(days):
     return weekly_out, monthly_out
 
 
+def merge_daily(existing_daily, fresh_daily):
+    """Merge a freshly-pulled window of daily rows into the full archive.
+
+    Rows for dates covered by the fresh pull replace whatever was there
+    before (Shopify orders can be refunded/edited after the fact, so the
+    trailing window is always re-synced); rows for older dates that the
+    fresh pull didn't touch are kept as-is, so the archive only grows."""
+    by_date = {r["date"]: r for r in existing_daily}
+    for r in fresh_daily:
+        by_date[r["date"]] = r
+    return [by_date[d] for d in sorted(by_date.keys())]
+
+
+def load_existing_daily(data_json_path):
+    if not data_json_path.exists():
+        return []
+    try:
+        existing = json.loads(data_json_path.read_text())
+        return existing.get("daily", [])
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
 def main():
     domain = env("SHOPIFY_STORE_DOMAIN")
     client_id = env("SHOPIFY_CLIENT_ID")
@@ -303,7 +327,11 @@ def main():
     print("Fetching Meta Ads spend...")
     adspend = fetch_meta_spend(meta_account, meta_token, days_back)
 
-    daily = build_daily(sales, sessions, {}, adspend, cod_by_day)
+    fresh_daily = build_daily(sales, sessions, {}, adspend, cod_by_day)
+
+    out_path = Path(os.path.dirname(__file__) or ".") / "data.json"
+    existing_daily = load_existing_daily(out_path)
+    daily = merge_daily(existing_daily, fresh_daily)
     weekly, monthly = rollup(daily)
 
     output = {
@@ -318,6 +346,7 @@ def main():
                 "Ad Spend and ROAS input revenue come from the connected Meta Ads account.",
                 "ROAS = Revenue (Gross Sales - Discounts) / Meta Ad Spend for the same period. Days with zero ad spend show ROAS as not applicable.",
                 "COD vs Prepaid is classified per order from Shopify's financial status: Paid = Prepaid, Partially Paid = COD (a token amount collected online, balance on delivery). Orders in other states (pending, refunded, voided) aren't counted in the split. Computed per day from exact order counts, then rolled up into weekly/monthly totals.",
+                f"This is a growing archive, not a rolling window: each refresh re-syncs the last {days_back} days (to catch refunds/edits to recent orders) and keeps every earlier day untouched, so history accumulates for as long as the dashboard has been refreshed.",
             ],
         },
         "daily": daily,
@@ -325,10 +354,13 @@ def main():
         "monthly": monthly,
     }
 
-    out_path = os.path.join(os.path.dirname(__file__), "data.json")
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
-    print(f"Wrote {out_path} ({len(daily)} days, {len(weekly)} weeks, {len(monthly)} months)")
+    new_days = len(daily) - len(existing_daily)
+    print(
+        f"Wrote {out_path}: {len(daily)} days total in archive "
+        f"({new_days:+d} vs previous run), {len(weekly)} weeks, {len(monthly)} months"
+    )
     print("Run `python3 build.py` next to embed the refreshed data into index.html.")
 
 

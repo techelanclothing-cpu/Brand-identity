@@ -36,6 +36,19 @@ all in the Elan brand palette and Gilroy typeface, with light/dark mode.
 Just open `index.html` in a browser — double-click it, or `open dashboard/index.html`.
 No build step or server is required to view the current snapshot.
 
+## It's a growing archive, not a rolling window
+
+Every refresh re-pulls the last `DAYS_BACK` days (default 60) from Shopify/Meta
+and **merges** them into `data.json`: days within that fresh window are
+overwritten (so refunds, cancellations, or corrected financial status on
+recent orders stay accurate), but every earlier day is left untouched. Nothing
+ages out — the archive keeps growing for as long as the dashboard has been
+refreshed, so the Daily/Weekly/Monthly views and the Compare panel can look
+back arbitrarily far, not just the last couple of months. Both
+`fetch_metrics.py` and `refresh_from_mcp.py build` share this merge logic
+(`merge_daily()` / `load_existing_daily()` in `fetch_metrics.py`) — if
+`data.json` doesn't exist yet, the first run just seeds the archive.
+
 ## Automatic daily refresh (GitHub Action)
 
 `.github/workflows/refresh-dashboard.yml` runs every day at 00:30 UTC (06:00
