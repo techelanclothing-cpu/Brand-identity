@@ -15,9 +15,20 @@ in the same shape index.html expects.
 
 Environment variables required:
   SHOPIFY_STORE_DOMAIN     e.g. "elan-clothing-r.myshopify.com"
-  SHOPIFY_ACCESS_TOKEN     Admin API access token with read_orders, read_analytics scopes
+  SHOPIFY_CLIENT_ID        Client ID of a Dev Dashboard app installed on the store,
+                           with read_orders + read_analytics scopes
+  SHOPIFY_CLIENT_SECRET    Client secret for that same app
   META_AD_ACCOUNT_ID       numeric ad account id, e.g. "1778418969517591"
   META_ACCESS_TOKEN        Meta Marketing API access token with ads_read scope
+
+Shopify auth uses the client credentials grant (the current way to authenticate a
+server-side app against your own store — admin-created "legacy custom apps" with a
+static access token can no longer be created as of Jan 1, 2026). This script
+exchanges SHOPIFY_CLIENT_ID/SECRET for a short-lived (24h) access token at the start
+of each run — see get_shopify_access_token() below. Create the app once in the
+Shopify Dev Dashboard (dev.shopify.com/dashboard), give it read_orders +
+read_analytics, install it on the store, and use its Client ID/secret here — see
+dashboard/README.md for the full walkthrough.
 
 Optional:
   DAYS_BACK                how many days of history to pull (default 60)
@@ -43,6 +54,31 @@ def env(name, required=True, default=None):
         print(f"Missing required environment variable: {name}", file=sys.stderr)
         sys.exit(1)
     return v
+
+
+def get_shopify_access_token(domain, client_id, client_secret):
+    """Client credentials grant: exchange the app's own credentials for a 24h
+    access token, scoped to whatever access scopes the app's Dev Dashboard
+    version has released. No merchant/OAuth redirect involved."""
+    url = f"https://{domain}/admin/oauth/access_token"
+    body = urllib.parse.urlencode({
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "client_credentials",
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"Shopify token exchange failed ({e.code}): {detail}\n"
+            "Check SHOPIFY_CLIENT_ID/SHOPIFY_CLIENT_SECRET, and that the app "
+            "is installed on this store and in the same Shopify organization."
+        ) from e
+    return payload["access_token"]
 
 
 def shopify_graphql(domain, token, query, variables=None):
@@ -261,9 +297,13 @@ def rollup(days):
 
 def main():
     domain = env("SHOPIFY_STORE_DOMAIN")
-    token = env("SHOPIFY_ACCESS_TOKEN")
+    client_id = env("SHOPIFY_CLIENT_ID")
+    client_secret = env("SHOPIFY_CLIENT_SECRET")
     meta_account = env("META_AD_ACCOUNT_ID")
     meta_token = env("META_ACCESS_TOKEN")
+
+    print("Exchanging Shopify client credentials for an access token...")
+    token = get_shopify_access_token(domain, client_id, client_secret)
     days_back = int(os.environ.get("DAYS_BACK", "60"))
 
     print(f"Fetching {days_back} days of Shopify sales/sessions data...")

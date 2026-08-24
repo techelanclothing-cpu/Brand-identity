@@ -39,18 +39,42 @@ No build step or server is required to view the current snapshot.
 IST), pulls fresh data, and commits `dashboard/data.json` + `dashboard/index.html`
 straight to this branch — no manual step, no Claude session involved.
 
-**One-time setup — add two repo secrets** (Settings → Secrets and variables →
+**One-time setup — add three repo secrets** (Settings → Secrets and variables →
 Actions → New repository secret):
 
-| Secret | How to get it |
+Shopify retired the old "Develop apps → Create an app" flow for new apps as of
+January 1, 2026 (existing apps still work, but you can't create new ones that
+way anymore — if you land on a "Legacy custom apps" notice in Shopify Admin,
+that's why). New apps are created in the **Dev Dashboard** instead, and
+authenticate with a **Client ID + Client secret** rather than a single static
+token:
+
+1. Go to **dev.shopify.com/dashboard** and log in with the account that owns
+   `elan-clothing-r.myshopify.com` (or that store's organization).
+2. **Apps → Create app → Start from Dev Dashboard.** Name it something like
+   "Performance dashboard sync."
+3. Open the app → **Versions → Release** (top right). Under **Access**, select
+   scopes: add `read_orders` and `read_analytics`. Save/Release.
+4. Back on the app's **Home** tab → **Install app** → choose
+   `elan-clothing-r.myshopify.com` → Install.
+5. Go to **Settings** on the app and copy the **Client ID** and **Client
+   secret**.
+
+| Secret | Value |
 |---|---|
-| `SHOPIFY_ACCESS_TOKEN` | Shopify Admin → Settings → Apps and sales channels → Develop apps → Create an app → Configuration → Admin API scopes: enable `read_orders` and `read_analytics` → Install app → API credentials → reveal the Admin API access token (`shpat_...`). |
+| `SHOPIFY_CLIENT_ID` | The Client ID from step 5. |
+| `SHOPIFY_CLIENT_SECRET` | The Client secret from step 5. Treat it like a password. |
 | `META_ACCESS_TOKEN` | developers.facebook.com → your app (or Meta Business Suite → Business Settings → System Users) → generate a token with `ads_read` permission for the ad account, ideally a long-lived / system-user token so it doesn't expire every 60 days. |
 
-Once both secrets exist, the workflow runs on its own from the next scheduled
-time — no further action needed. Trigger it manually any time from the
-Actions tab ("Refresh performance dashboard" → Run workflow) to test it or
-force an immediate refresh.
+`fetch_metrics.py` exchanges the Shopify Client ID/secret for a fresh 24-hour
+access token on every run (the "client credentials grant" — Shopify's current
+way for an app to authenticate against its own store with no manual token to
+rotate), so there's nothing to renew by hand later.
+
+Once all three secrets exist, the workflow runs on its own from the next
+scheduled time — no further action needed. Trigger it manually any time from
+the Actions tab ("Refresh performance dashboard" → Run workflow) to test it
+or force an immediate refresh.
 
 Note: this keeps `dashboard/index.html` in the repo current, but does **not**
 update a separately-published Claude Artifact link — Artifact publishing is a
@@ -66,13 +90,18 @@ live from the connected Shopify store and Meta Ads account. To pull a fresh snap
 
 ```bash
 export SHOPIFY_STORE_DOMAIN=elan-clothing-r.myshopify.com
-export SHOPIFY_ACCESS_TOKEN=shpat_...        # Admin API token: read_orders, read_analytics
+export SHOPIFY_CLIENT_ID=...           # from the Dev Dashboard app's Settings page
+export SHOPIFY_CLIENT_SECRET=...       # same app, keep this one secret
 export META_AD_ACCOUNT_ID=1778418969517591    # numeric ad account id, no "act_" prefix
 export META_ACCESS_TOKEN=EAA...                # Marketing API token: ads_read
 
 python3 fetch_metrics.py   # writes data.json
 python3 build.py           # embeds data.json into index.html
 ```
+
+See the Dev Dashboard walkthrough above for how to get `SHOPIFY_CLIENT_ID` /
+`SHOPIFY_CLIENT_SECRET` — the old single-token "Develop apps" flow was retired
+January 1, 2026.
 
 `DAYS_BACK` (default `60`) controls how much history `fetch_metrics.py` pulls.
 

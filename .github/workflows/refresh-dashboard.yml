@@ -27,7 +27,8 @@ jobs:
       - name: Fetch latest metrics
         env:
           SHOPIFY_STORE_DOMAIN: elan-clothing-r.myshopify.com
-          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           META_AD_ACCOUNT_ID: "1778418969517591"
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
         run: |
