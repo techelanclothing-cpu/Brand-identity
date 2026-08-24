@@ -1,0 +1,2261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elan Clothing — Performance Dashboard</title>
+<link rel="icon" href="../Elan%20-%20Icon%20-%20Black.svg">
+<style>
+  @font-face { font-family: 'Gilroy'; src: url('../Gilroy-Regular.woff') format('woff'); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'Gilroy'; src: url('../Gilroy-Medium.woff') format('woff'); font-weight: 500; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'Gilroy'; src: url('../Gilroy-Semibold.woff') format('woff'); font-weight: 600; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'Gilroy'; src: url('../Gilroy-Bold.woff') format('woff'); font-weight: 700; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'Gilroy'; src: url('../Gilroy-Extrabold.woff') format('woff'); font-weight: 800; font-style: normal; font-display: swap; }
+
+  :root {
+    color-scheme: light;
+    --page: #F0F0F0;
+    --surface: #FFFFFF;
+    --surface-2: #FAFAF9;
+    --text-primary: #212121;
+    --text-secondary: #55524F;
+    --text-muted: #8A8781;
+    --border: rgba(33,33,33,0.10);
+    --gridline: #E7E5E0;
+    --brand-maroon: #5B0017;
+    --brand-maroon-ink: #7A0220;
+    --brand-bronze: #A67A4F;
+    --brand-slate: #36454F;
+    --series-revenue: #B3264F;
+    --series-spend: #B07A22;
+    --series-cod: #B3264F;
+    --series-prepaid: #B07A22;
+    --good: #0ca30c;
+    --critical: #d03b3b;
+    --shadow: 0 1px 2px rgba(33,33,33,0.06), 0 8px 24px rgba(33,33,33,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0c;
+      --surface: #19170f14;
+      --surface: #1a1712;
+      --surface-2: #201d17;
+      --text-primary: #FFFFFF;
+      --text-secondary: #C7C4BB;
+      --text-muted: #8F8B82;
+      --border: rgba(255,255,255,0.10);
+      --gridline: #2c2a25;
+      --brand-maroon: #C23158;
+      --brand-maroon-ink: #E0567F;
+      --brand-bronze: #C99038;
+      --brand-slate: #7A93A3;
+      --series-revenue: #E0567F;
+      --series-spend: #B57C2C;
+      --series-cod: #E0567F;
+      --series-prepaid: #B57C2C;
+      --good: #0ca30c;
+      --critical: #e66767;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0c;
+    --surface: #1a1712;
+    --surface-2: #201d17;
+    --text-primary: #FFFFFF;
+    --text-secondary: #C7C4BB;
+    --text-muted: #8F8B82;
+    --border: rgba(255,255,255,0.10);
+    --gridline: #2c2a25;
+    --brand-maroon: #C23158;
+    --brand-maroon-ink: #E0567F;
+    --brand-bronze: #C99038;
+    --brand-slate: #7A93A3;
+    --series-revenue: #E0567F;
+    --series-spend: #B57C2C;
+    --series-cod: #E0567F;
+    --series-prepaid: #B57C2C;
+    --good: #0ca30c;
+    --critical: #e66767;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: 'Gilroy', system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  header.topbar {
+    background: linear-gradient(135deg, var(--brand-maroon) 0%, #3d0010 100%);
+    color: #fff;
+    padding: 18px clamp(16px, 4vw, 40px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { height: 26px; width: auto; display: block; }
+  .brand .divider { width: 1px; height: 22px; background: rgba(255,255,255,0.3); }
+  .brand .title { font-weight: 600; font-size: 15px; letter-spacing: 0.02em; opacity: 0.95; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: 0.9; }
+  .theme-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .theme-btn:hover { background: rgba(255,255,255,0.2); }
+
+  main { max-width: 1240px; margin: 0 auto; padding: 24px clamp(16px, 4vw, 40px) 64px; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .tabs {
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    box-shadow: var(--shadow);
+  }
+  .tab-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .tab-btn[aria-selected="true"] {
+    background: var(--brand-maroon);
+    color: #fff;
+  }
+  .period-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .period-select label { font-size: 12px; color: var(--text-muted); }
+  select {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    box-shadow: var(--shadow);
+  }
+
+  .period-heading { margin: 4px 0 18px; }
+  .period-heading .range { font-size: 13px; color: var(--text-muted); }
+  .period-heading h1 { font-size: 20px; margin: 2px 0 0; font-weight: 700; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 16px 14px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 118px;
+  }
+  .kpi-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kpi-value-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .kpi-value { font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); }
+  .delta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .delta-chip.up { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .delta-chip.down { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
+  .delta-chip.flat { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 14%, transparent); }
+  .kpi-spark { margin-top: auto; }
+  .kpi-spark svg { display: block; width: 100%; height: 34px; }
+  .split-bar-wrap { margin-top: auto; }
+  .split-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--gridline); gap: 2px; }
+  .split-bar > div { height: 100%; }
+  .split-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+  .split-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+  .panel-title { font-size: 14px; font-weight: 700; }
+  .panel-note { font-size: 11.5px; color: var(--text-muted); }
+  .legend-row { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; flex-wrap: wrap; }
+  .legend-row .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+  .chart-wrap { position: relative; }
+  .chart-wrap svg { display: block; width: 100%; height: 260px; overflow: visible; }
+  .axis-label { fill: var(--text-muted); font-size: 10px; font-family: 'Gilroy', sans-serif; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; pointer-events: none; }
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--text-primary);
+    color: var(--page);
+    font-size: 11.5px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translate(-50%, -110%);
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+    z-index: 5;
+  }
+  :root[data-theme="dark"] .tooltip { background: #f0efec; color: #16150f; }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .tooltip { background: #f0efec; color: #16150f; } }
+  .tooltip .t-row { display: flex; gap: 10px; justify-content: space-between; }
+  .tooltip .t-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+
+  .two-col { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+  .two-col.even-col { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+
+  .split-chart { display: flex; flex-direction: column; gap: 14px; justify-content: center; height: 100%; }
+  .split-row { display: flex; align-items: center; gap: 12px; }
+  .split-row .name { width: 84px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .split-row .track { flex: 1; height: 22px; border-radius: 6px; background: var(--gridline); overflow: hidden; display: flex; }
+  .split-row .fill { height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 700; color: #fff; }
+  .split-row .amount { width: 96px; text-align: right; font-size: 12px; color: var(--text-muted); }
+
+  details.table-toggle { margin-top: 4px; }
+  summary.table-toggle-btn {
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--brand-maroon-ink);
+    list-style: none;
+    padding: 6px 0;
+  }
+  :root[data-theme="dark"] summary.table-toggle-btn { color: var(--series-revenue); }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) summary.table-toggle-btn { color: var(--series-revenue); } }
+  summary.table-toggle-btn::-webkit-details-marker { display: none; }
+  summary.table-toggle-btn::before { content: '▸ '; }
+  details[open] summary.table-toggle-btn::before { content: '▾ '; }
+
+  .table-scroll { overflow-x: auto; margin-top: 10px; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12px; min-width: 920px; }
+  table.data-table th, table.data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table thead th { color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
+  table.data-table tbody tr:hover { background: var(--surface-2); }
+
+  footer.notes {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  footer.notes ul { margin: 6px 0 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <img src="../Elan%20-%20Wordmark%20-%20White.svg" alt="Elan Clothing">
+    <div class="divider"></div>
+    <div class="title">Performance Dashboard</div>
+  </div>
+  <div class="topbar-right">
+    <span id="shop-meta"></span>
+    <button class="theme-btn" id="theme-toggle" type="button">🌙 Dark mode</button>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="tabs" role="tablist" aria-label="Granularity">
+      <button class="tab-btn" role="tab" data-gran="daily" aria-selected="true">Daily</button>
+      <button class="tab-btn" role="tab" data-gran="weekly" aria-selected="false">Weekly</button>
+      <button class="tab-btn" role="tab" data-gran="monthly" aria-selected="false">Monthly</button>
+    </div>
+    <div class="period-select">
+      <label for="period-picker">Period</label>
+      <select id="period-picker"></select>
+    </div>
+  </div>
+
+  <div class="period-heading">
+    <div class="range" id="period-range"></div>
+    <h1 id="period-title"></h1>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Revenue vs. Ad Spend</div>
+        <div class="panel-note" id="trend-range-note"></div>
+      </div>
+      <div class="legend-row">
+        <span><span class="dot" style="background:var(--series-revenue)"></span>Revenue (net of discounts)</span>
+        <span><span class="dot" style="background:var(--series-spend)"></span>Meta Ad Spend</span>
+      </div>
+      <div class="chart-wrap" id="trend-chart-wrap">
+        <svg id="trend-chart" viewBox="0 0 640 260" preserveAspectRatio="none"></svg>
+        <div class="tooltip" id="trend-tooltip"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">COD vs. Prepaid</div>
+      </div>
+      <div class="panel-note" style="margin-bottom:10px">Share of orders in the selected period</div>
+      <div class="split-chart">
+        <div class="split-row">
+          <div class="name"><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--series-cod);margin-right:6px"></span>COD</div>
+          <div class="track"><div class="fill" id="cod-fill" style="background:var(--series-cod)"></div></div>
+          <div class="amount" id="cod-amount"></div>
+        </div>
+        <div class="split-row">
+          <div class="name"><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--series-prepaid);margin-right:6px"></span>Prepaid</div>
+          <div class="track"><div class="fill" id="prepaid-fill" style="background:var(--series-prepaid)"></div></div>
+          <div class="amount" id="prepaid-amount"></div>
+        </div>
+        <div class="panel-note" id="split-basis-note" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col even-col">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Orders</div>
+      </div>
+      <div class="legend-row">
+        <span><span class="dot" style="background:var(--series-revenue)"></span>Orders</span>
+      </div>
+      <div class="chart-wrap" id="orders-chart-wrap">
+        <svg id="orders-chart" viewBox="0 0 640 200" preserveAspectRatio="none"></svg>
+        <div class="tooltip" id="orders-tooltip"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Sessions</div>
+      </div>
+      <div class="legend-row">
+        <span><span class="dot" style="background:var(--brand-slate)"></span>Sessions</span>
+      </div>
+      <div class="chart-wrap" id="sessions-chart-wrap">
+        <svg id="sessions-chart" viewBox="0 0 640 200" preserveAspectRatio="none"></svg>
+        <div class="tooltip" id="sessions-tooltip"></div>
+      </div>
+    </div>
+  </div>
+
+  <details class="table-toggle" id="table-toggle">
+    <summary class="table-toggle-btn">View full data table for this granularity</summary>
+    <div class="table-scroll">
+      <table class="data-table tabular" id="data-table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <footer class="notes">
+    <strong>How these numbers are built</strong>
+    <ul id="notes-list"></ul>
+    <div id="generated-note" style="margin-top:8px"></div>
+  </footer>
+</main>
+
+<script id="dashboard-data" type="application/json">
+{
+  "meta": {
+    "shop": "Elan Clothing (elanclothing.in)",
+    "currency": "INR",
+    "generated_at": "2026-08-24T08:30:00Z",
+    "range": {
+      "from": "2026-06-25",
+      "to": "2026-08-24"
+    },
+    "notes": [
+      "Gross Sales, Discounts, AOV and Sessions are sourced from Shopify's ShopifyQL 'sales' and 'sessions' datasets. Conversion% is computed as Orders / Sessions.",
+      "Quantity uses Shopify's net_items_sold metric (units sold, net of returns) for the period.",
+      "Ad Spend and ROAS input revenue come from the connected Meta Ads account '#2 Elan Clothing Retai' (account id 1778418969517591).",
+      "ROAS = Revenue (Gross Sales - Discounts) / Meta Ad Spend for the same period. Days with zero ad spend show ROAS as not applicable.",
+      "COD vs Prepaid split is estimated from a live sample of the most recent orders' payment gateway names (Cash on Delivery (COD) vs online gateways such as Razorpay/Shopflo) and applied uniformly across the shown range. Re-run the fetch script with a date-scoped GraphQL order query to compute an exact per-period split."
+    ]
+  },
+  "daily": [
+    {
+      "date": "2026-06-25",
+      "orders": 35,
+      "gross_sales": 11677.06,
+      "discounts": 1632.11,
+      "revenue": 10044.95,
+      "quantity": 2,
+      "sessions": 593,
+      "conversion_rate": 5.902,
+      "aov": 287.0,
+      "ad_spend": 2240.07,
+      "roas": 4.48,
+      "discount_pct": 13.98,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-06-26",
+      "orders": 22,
+      "gross_sales": 18938.0,
+      "discounts": 675.64,
+      "revenue": 18262.36,
+      "quantity": 12,
+      "sessions": 818,
+      "conversion_rate": 2.689,
+      "aov": 830.11,
+      "ad_spend": 3637.52,
+      "roas": 5.02,
+      "discount_pct": 3.57,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-06-27",
+      "orders": 24,
+      "gross_sales": 22838.03,
+      "discounts": 547.14,
+      "revenue": 22290.89,
+      "quantity": 12,
+      "sessions": 1256,
+      "conversion_rate": 1.911,
+      "aov": 928.79,
+      "ad_spend": 6455.35,
+      "roas": 3.45,
+      "discount_pct": 2.4,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-06-28",
+      "orders": 12,
+      "gross_sales": 15890.44,
+      "discounts": 442.43,
+      "revenue": 15448.01,
+      "quantity": 15,
+      "sessions": 1018,
+      "conversion_rate": 1.179,
+      "aov": 1287.33,
+      "ad_spend": 4616.21,
+      "roas": 3.35,
+      "discount_pct": 2.78,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-06-29",
+      "orders": 21,
+      "gross_sales": 27691.3,
+      "discounts": 1070.46,
+      "revenue": 26620.84,
+      "quantity": 24,
+      "sessions": 1582,
+      "conversion_rate": 1.327,
+      "aov": 1267.66,
+      "ad_spend": 6937.56,
+      "roas": 3.84,
+      "discount_pct": 3.87,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-06-30",
+      "orders": 33,
+      "gross_sales": 36632.28,
+      "discounts": 1088.37,
+      "revenue": 35543.91,
+      "quantity": 7,
+      "sessions": 2728,
+      "conversion_rate": 1.21,
+      "aov": 1077.09,
+      "ad_spend": 13723.6,
+      "roas": 2.59,
+      "discount_pct": 2.97,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-01",
+      "orders": 69,
+      "gross_sales": 62518.87,
+      "discounts": 2064.81,
+      "revenue": 60454.06,
+      "quantity": 73,
+      "sessions": 2837,
+      "conversion_rate": 2.432,
+      "aov": 876.14,
+      "ad_spend": 12537.91,
+      "roas": 4.82,
+      "discount_pct": 3.3,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-02",
+      "orders": 39,
+      "gross_sales": 47287.49,
+      "discounts": 1569.79,
+      "revenue": 45717.7,
+      "quantity": 48,
+      "sessions": 3065,
+      "conversion_rate": 1.272,
+      "aov": 1172.25,
+      "ad_spend": 13395.9,
+      "roas": 3.41,
+      "discount_pct": 3.32,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-03",
+      "orders": 39,
+      "gross_sales": 53382.76,
+      "discounts": 865.88,
+      "revenue": 52516.88,
+      "quantity": 27,
+      "sessions": 2439,
+      "conversion_rate": 1.599,
+      "aov": 1346.59,
+      "ad_spend": 9429.25,
+      "roas": 5.57,
+      "discount_pct": 1.62,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-04",
+      "orders": 50,
+      "gross_sales": 48529.42,
+      "discounts": 1879.23,
+      "revenue": 46650.19,
+      "quantity": 49,
+      "sessions": 2801,
+      "conversion_rate": 1.785,
+      "aov": 933.0,
+      "ad_spend": 12010.33,
+      "roas": 3.88,
+      "discount_pct": 3.87,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-05",
+      "orders": 41,
+      "gross_sales": 49670.35,
+      "discounts": 1850.62,
+      "revenue": 47819.73,
+      "quantity": 46,
+      "sessions": 2877,
+      "conversion_rate": 1.425,
+      "aov": 1166.33,
+      "ad_spend": 12592.14,
+      "roas": 3.8,
+      "discount_pct": 3.73,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-06",
+      "orders": 27,
+      "gross_sales": 32160.81,
+      "discounts": 1122.62,
+      "revenue": 31038.19,
+      "quantity": 30,
+      "sessions": 3575,
+      "conversion_rate": 0.755,
+      "aov": 1149.56,
+      "ad_spend": 16142.64,
+      "roas": 1.92,
+      "discount_pct": 3.49,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-07",
+      "orders": 46,
+      "gross_sales": 66701.71,
+      "discounts": 2806.57,
+      "revenue": 63895.14,
+      "quantity": 38,
+      "sessions": 4128,
+      "conversion_rate": 1.114,
+      "aov": 1389.02,
+      "ad_spend": 18651.58,
+      "roas": 3.43,
+      "discount_pct": 4.21,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-08",
+      "orders": 57,
+      "gross_sales": 76561.62,
+      "discounts": 3891.65,
+      "revenue": 72669.97,
+      "quantity": 67,
+      "sessions": 4913,
+      "conversion_rate": 1.16,
+      "aov": 1274.91,
+      "ad_spend": 19872.18,
+      "roas": 3.66,
+      "discount_pct": 5.08,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-09",
+      "orders": 63,
+      "gross_sales": 69379.71,
+      "discounts": 4214.93,
+      "revenue": 65164.78,
+      "quantity": 34,
+      "sessions": 5790,
+      "conversion_rate": 1.088,
+      "aov": 1017.14,
+      "ad_spend": 21881.82,
+      "roas": 2.98,
+      "discount_pct": 6.08,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-10",
+      "orders": 60,
+      "gross_sales": 82790.11,
+      "discounts": 3168.45,
+      "revenue": 79621.66,
+      "quantity": 64,
+      "sessions": 4620,
+      "conversion_rate": 1.299,
+      "aov": 1327.03,
+      "ad_spend": 19131.57,
+      "roas": 4.16,
+      "discount_pct": 3.83,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-11",
+      "orders": 55,
+      "gross_sales": 78459.76,
+      "discounts": 2921.17,
+      "revenue": 75538.59,
+      "quantity": 66,
+      "sessions": 4935,
+      "conversion_rate": 1.114,
+      "aov": 1353.7,
+      "ad_spend": 21156.4,
+      "roas": 3.57,
+      "discount_pct": 3.72,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-12",
+      "orders": 70,
+      "gross_sales": 89345.37,
+      "discounts": 2982.97,
+      "revenue": 86362.4,
+      "quantity": 78,
+      "sessions": 5513,
+      "conversion_rate": 1.27,
+      "aov": 1233.75,
+      "ad_spend": 27195.33,
+      "roas": 3.18,
+      "discount_pct": 3.34,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-13",
+      "orders": 61,
+      "gross_sales": 72425.45,
+      "discounts": 1755.51,
+      "revenue": 70669.94,
+      "quantity": 68,
+      "sessions": 4579,
+      "conversion_rate": 1.332,
+      "aov": 1158.52,
+      "ad_spend": 21079.65,
+      "roas": 3.35,
+      "discount_pct": 2.42,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-14",
+      "orders": 48,
+      "gross_sales": 65936.88,
+      "discounts": 2159.88,
+      "revenue": 63777.0,
+      "quantity": 38,
+      "sessions": 3640,
+      "conversion_rate": 1.319,
+      "aov": 1328.69,
+      "ad_spend": 16341.45,
+      "roas": 3.9,
+      "discount_pct": 3.28,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-15",
+      "orders": 51,
+      "gross_sales": 73635.96,
+      "discounts": 2426.95,
+      "revenue": 71209.01,
+      "quantity": 67,
+      "sessions": 4256,
+      "conversion_rate": 1.198,
+      "aov": 1396.26,
+      "ad_spend": 21328.91,
+      "roas": 3.34,
+      "discount_pct": 3.3,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-16",
+      "orders": 72,
+      "gross_sales": 100251.99,
+      "discounts": 6433.09,
+      "revenue": 93818.9,
+      "quantity": 82,
+      "sessions": 4954,
+      "conversion_rate": 1.453,
+      "aov": 1303.04,
+      "ad_spend": 27470.03,
+      "roas": 3.42,
+      "discount_pct": 6.42,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-17",
+      "orders": 65,
+      "gross_sales": 93314.92,
+      "discounts": 4410.34,
+      "revenue": 88904.58,
+      "quantity": 77,
+      "sessions": 5597,
+      "conversion_rate": 1.161,
+      "aov": 1367.76,
+      "ad_spend": 30754.83,
+      "roas": 2.89,
+      "discount_pct": 4.73,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-18",
+      "orders": 118,
+      "gross_sales": 104448.19,
+      "discounts": 4557.9,
+      "revenue": 99890.29,
+      "quantity": 99,
+      "sessions": 6616,
+      "conversion_rate": 1.784,
+      "aov": 846.53,
+      "ad_spend": 37437.07,
+      "roas": 2.67,
+      "discount_pct": 4.36,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-19",
+      "orders": 89,
+      "gross_sales": 126704.3,
+      "discounts": 4938.12,
+      "revenue": 121766.18,
+      "quantity": 108,
+      "sessions": 9097,
+      "conversion_rate": 0.978,
+      "aov": 1368.16,
+      "ad_spend": 53797.46,
+      "roas": 2.26,
+      "discount_pct": 3.9,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-20",
+      "orders": 58,
+      "gross_sales": 68231.11,
+      "discounts": 4669.37,
+      "revenue": 63561.74,
+      "quantity": 69,
+      "sessions": 3714,
+      "conversion_rate": 1.562,
+      "aov": 1095.89,
+      "ad_spend": 19676.65,
+      "roas": 3.23,
+      "discount_pct": 6.84,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-21",
+      "orders": 53,
+      "gross_sales": 67151.03,
+      "discounts": 6352.11,
+      "revenue": 60798.92,
+      "quantity": 49,
+      "sessions": 3303,
+      "conversion_rate": 1.605,
+      "aov": 969.4,
+      "ad_spend": 17140.58,
+      "roas": 3.55,
+      "discount_pct": 9.46,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-22",
+      "orders": 30,
+      "gross_sales": 42395.1,
+      "discounts": 2426.06,
+      "revenue": 39969.04,
+      "quantity": 15,
+      "sessions": 3111,
+      "conversion_rate": 0.964,
+      "aov": 1303.76,
+      "ad_spend": 17510.08,
+      "roas": 2.28,
+      "discount_pct": 5.72,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-23",
+      "orders": 32,
+      "gross_sales": 40348.44,
+      "discounts": 989.57,
+      "revenue": 39358.87,
+      "quantity": 33,
+      "sessions": 2682,
+      "conversion_rate": 1.193,
+      "aov": 1229.96,
+      "ad_spend": 15493.81,
+      "roas": 2.54,
+      "discount_pct": 2.45,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-24",
+      "orders": 32,
+      "gross_sales": 45391.3,
+      "discounts": 1227.41,
+      "revenue": 44163.89,
+      "quantity": 39,
+      "sessions": 2420,
+      "conversion_rate": 1.322,
+      "aov": 1380.12,
+      "ad_spend": 14978.84,
+      "roas": 2.95,
+      "discount_pct": 2.7,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-25",
+      "orders": 49,
+      "gross_sales": 62902.71,
+      "discounts": 2141.07,
+      "revenue": 60761.64,
+      "quantity": 65,
+      "sessions": 3981,
+      "conversion_rate": 1.231,
+      "aov": 1240.03,
+      "ad_spend": 21460.21,
+      "roas": 2.83,
+      "discount_pct": 3.4,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-26",
+      "orders": 46,
+      "gross_sales": 61948.37,
+      "discounts": 2055.31,
+      "revenue": 59893.06,
+      "quantity": 54,
+      "sessions": 4875,
+      "conversion_rate": 0.944,
+      "aov": 1302.02,
+      "ad_spend": 26175.54,
+      "roas": 2.29,
+      "discount_pct": 3.32,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-27",
+      "orders": 47,
+      "gross_sales": 66523.53,
+      "discounts": 3996.34,
+      "revenue": 62527.19,
+      "quantity": 30,
+      "sessions": 3067,
+      "conversion_rate": 1.532,
+      "aov": 1330.37,
+      "ad_spend": 16172.19,
+      "roas": 3.87,
+      "discount_pct": 6.01,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-28",
+      "orders": 40,
+      "gross_sales": 41395.11,
+      "discounts": 1332.17,
+      "revenue": 40062.94,
+      "quantity": 14,
+      "sessions": 4214,
+      "conversion_rate": 0.949,
+      "aov": 1001.57,
+      "ad_spend": 20101.09,
+      "roas": 1.99,
+      "discount_pct": 3.22,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-29",
+      "orders": 34,
+      "gross_sales": 45773.21,
+      "discounts": 1165.6,
+      "revenue": 44607.61,
+      "quantity": 27,
+      "sessions": 3994,
+      "conversion_rate": 0.851,
+      "aov": 1311.99,
+      "ad_spend": 18260.0,
+      "roas": 2.44,
+      "discount_pct": 2.55,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-30",
+      "orders": 41,
+      "gross_sales": 51575.04,
+      "discounts": 1560.44,
+      "revenue": 50014.6,
+      "quantity": 45,
+      "sessions": 3609,
+      "conversion_rate": 1.136,
+      "aov": 1219.87,
+      "ad_spend": 16306.29,
+      "roas": 3.07,
+      "discount_pct": 3.03,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-07-31",
+      "orders": 52,
+      "gross_sales": 41737.93,
+      "discounts": 2397.98,
+      "revenue": 39339.95,
+      "quantity": 34,
+      "sessions": 3504,
+      "conversion_rate": 1.484,
+      "aov": 756.54,
+      "ad_spend": 16733.24,
+      "roas": 2.35,
+      "discount_pct": 5.75,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-01",
+      "orders": 45,
+      "gross_sales": 52219.82,
+      "discounts": 3140.46,
+      "revenue": 49079.36,
+      "quantity": 33,
+      "sessions": 3376,
+      "conversion_rate": 1.333,
+      "aov": 1090.65,
+      "ad_spend": 14178.53,
+      "roas": 3.46,
+      "discount_pct": 6.01,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-02",
+      "orders": 61,
+      "gross_sales": 79926.4,
+      "discounts": 2754.19,
+      "revenue": 77172.21,
+      "quantity": 75,
+      "sessions": 5367,
+      "conversion_rate": 1.137,
+      "aov": 1265.12,
+      "ad_spend": 21539.41,
+      "roas": 3.58,
+      "discount_pct": 3.45,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-03",
+      "orders": 37,
+      "gross_sales": 50056.92,
+      "discounts": 1508.21,
+      "revenue": 48548.71,
+      "quantity": 41,
+      "sessions": 3505,
+      "conversion_rate": 1.056,
+      "aov": 1312.13,
+      "ad_spend": 14455.03,
+      "roas": 3.36,
+      "discount_pct": 3.01,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-04",
+      "orders": 59,
+      "gross_sales": 71782.55,
+      "discounts": 5410.02,
+      "revenue": 66372.53,
+      "quantity": 55,
+      "sessions": 3497,
+      "conversion_rate": 1.687,
+      "aov": 1124.96,
+      "ad_spend": 14965.79,
+      "roas": 4.43,
+      "discount_pct": 7.54,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-05",
+      "orders": 52,
+      "gross_sales": 72904.37,
+      "discounts": 5756.57,
+      "revenue": 67147.8,
+      "quantity": 58,
+      "sessions": 3529,
+      "conversion_rate": 1.474,
+      "aov": 1291.3,
+      "ad_spend": 16234.77,
+      "roas": 4.14,
+      "discount_pct": 7.9,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-06",
+      "orders": 33,
+      "gross_sales": 51333.07,
+      "discounts": 2506.96,
+      "revenue": 48826.11,
+      "quantity": 40,
+      "sessions": 2953,
+      "conversion_rate": 1.118,
+      "aov": 1380.38,
+      "ad_spend": 14404.25,
+      "roas": 3.39,
+      "discount_pct": 4.88,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-07",
+      "orders": 68,
+      "gross_sales": 82023.52,
+      "discounts": 2416.47,
+      "revenue": 79607.05,
+      "quantity": 69,
+      "sessions": 3235,
+      "conversion_rate": 2.102,
+      "aov": 1170.69,
+      "ad_spend": 13057.54,
+      "roas": 6.1,
+      "discount_pct": 2.95,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-08",
+      "orders": 52,
+      "gross_sales": 72705.41,
+      "discounts": 2045.76,
+      "revenue": 70659.65,
+      "quantity": 59,
+      "sessions": 3766,
+      "conversion_rate": 1.381,
+      "aov": 1358.84,
+      "ad_spend": 16031.34,
+      "roas": 4.41,
+      "discount_pct": 2.81,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-09",
+      "orders": 52,
+      "gross_sales": 80602.58,
+      "discounts": 2664.28,
+      "revenue": 77938.3,
+      "quantity": 60,
+      "sessions": 4473,
+      "conversion_rate": 1.163,
+      "aov": 1498.81,
+      "ad_spend": 18949.5,
+      "roas": 4.11,
+      "discount_pct": 3.31,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-10",
+      "orders": 64,
+      "gross_sales": 76527.24,
+      "discounts": 6514.16,
+      "revenue": 70013.08,
+      "quantity": 64,
+      "sessions": 3923,
+      "conversion_rate": 1.631,
+      "aov": 1093.95,
+      "ad_spend": 14590.04,
+      "roas": 4.8,
+      "discount_pct": 8.51,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-11",
+      "orders": 47,
+      "gross_sales": 63094.0,
+      "discounts": 2935.32,
+      "revenue": 60158.68,
+      "quantity": 46,
+      "sessions": 3349,
+      "conversion_rate": 1.403,
+      "aov": 1253.04,
+      "ad_spend": 13801.29,
+      "roas": 4.36,
+      "discount_pct": 4.65,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-12",
+      "orders": 57,
+      "gross_sales": 66139.69,
+      "discounts": 2683.4,
+      "revenue": 63456.29,
+      "quantity": 35,
+      "sessions": 3414,
+      "conversion_rate": 1.67,
+      "aov": 1113.27,
+      "ad_spend": 15047.28,
+      "roas": 4.22,
+      "discount_pct": 4.06,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-13",
+      "orders": 61,
+      "gross_sales": 90495.76,
+      "discounts": 3791.52,
+      "revenue": 86704.24,
+      "quantity": 83,
+      "sessions": 3696,
+      "conversion_rate": 1.65,
+      "aov": 1421.38,
+      "ad_spend": 15810.54,
+      "roas": 5.48,
+      "discount_pct": 4.19,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-14",
+      "orders": 47,
+      "gross_sales": 69651.11,
+      "discounts": 2577.62,
+      "revenue": 67073.49,
+      "quantity": 51,
+      "sessions": 3083,
+      "conversion_rate": 1.524,
+      "aov": 1350.55,
+      "ad_spend": 12409.71,
+      "roas": 5.4,
+      "discount_pct": 3.7,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-15",
+      "orders": 53,
+      "gross_sales": 78415.84,
+      "discounts": 2935.52,
+      "revenue": 75480.32,
+      "quantity": 62,
+      "sessions": 3388,
+      "conversion_rate": 1.564,
+      "aov": 1424.16,
+      "ad_spend": 14215.64,
+      "roas": 5.31,
+      "discount_pct": 3.74,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-16",
+      "orders": 59,
+      "gross_sales": 86312.97,
+      "discounts": 3002.0,
+      "revenue": 83310.97,
+      "quantity": 70,
+      "sessions": 4175,
+      "conversion_rate": 1.413,
+      "aov": 1412.05,
+      "ad_spend": 16898.18,
+      "roas": 4.93,
+      "discount_pct": 3.48,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-17",
+      "orders": 77,
+      "gross_sales": 81933.51,
+      "discounts": 2886.46,
+      "revenue": 79047.05,
+      "quantity": 78,
+      "sessions": 3479,
+      "conversion_rate": 2.213,
+      "aov": 1026.59,
+      "ad_spend": 13712.2,
+      "roas": 5.76,
+      "discount_pct": 3.52,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-18",
+      "orders": 42,
+      "gross_sales": 52055.95,
+      "discounts": 1550.99,
+      "revenue": 50504.96,
+      "quantity": 40,
+      "sessions": 2825,
+      "conversion_rate": 1.487,
+      "aov": 1202.5,
+      "ad_spend": 11256.91,
+      "roas": 4.49,
+      "discount_pct": 2.98,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-19",
+      "orders": 36,
+      "gross_sales": 50627.38,
+      "discounts": 1565.24,
+      "revenue": 49062.14,
+      "quantity": 40,
+      "sessions": 3047,
+      "conversion_rate": 1.181,
+      "aov": 1362.84,
+      "ad_spend": 13010.13,
+      "roas": 3.77,
+      "discount_pct": 3.09,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-20",
+      "orders": 49,
+      "gross_sales": 89824.4,
+      "discounts": 5861.09,
+      "revenue": 83963.31,
+      "quantity": 57,
+      "sessions": 3310,
+      "conversion_rate": 1.48,
+      "aov": 1713.54,
+      "ad_spend": 14187.59,
+      "roas": 5.92,
+      "discount_pct": 6.53,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-21",
+      "orders": 59,
+      "gross_sales": 91262.52,
+      "discounts": 2778.54,
+      "revenue": 88483.98,
+      "quantity": 73,
+      "sessions": 2901,
+      "conversion_rate": 2.034,
+      "aov": 1499.73,
+      "ad_spend": 12250.89,
+      "roas": 7.22,
+      "discount_pct": 3.04,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-22",
+      "orders": 80,
+      "gross_sales": 114350.92,
+      "discounts": 6674.9,
+      "revenue": 107676.02,
+      "quantity": 94,
+      "sessions": 2976,
+      "conversion_rate": 2.688,
+      "aov": 1345.95,
+      "ad_spend": 12058.15,
+      "roas": 8.93,
+      "discount_pct": 5.84,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-23",
+      "orders": 86,
+      "gross_sales": 116204.26,
+      "discounts": 6693.77,
+      "revenue": 109510.49,
+      "quantity": 102,
+      "sessions": 4375,
+      "conversion_rate": 1.966,
+      "aov": 1273.38,
+      "ad_spend": 16541.67,
+      "roas": 6.62,
+      "discount_pct": 5.76,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    },
+    {
+      "date": "2026-08-24",
+      "orders": 19,
+      "gross_sales": 38989.31,
+      "discounts": 3901.67,
+      "revenue": 35087.64,
+      "quantity": 24,
+      "sessions": 1460,
+      "conversion_rate": 1.301,
+      "aov": 1786.62,
+      "ad_spend": 5844.99,
+      "roas": 6.0,
+      "discount_pct": 10.01,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0
+    }
+  ],
+  "weekly": [
+    {
+      "orders": 93,
+      "gross_sales": 69343.53,
+      "discounts": 3297.32,
+      "revenue": 66046.21,
+      "quantity": 41,
+      "sessions": 3685,
+      "conversion_rate": 2.524,
+      "aov": 745.63,
+      "ad_spend": 16949.15,
+      "roas": 3.9,
+      "discount_pct": 4.76,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W26",
+      "label": "2026-06-25 to 2026-06-28",
+      "days_in_period": 4
+    },
+    {
+      "orders": 292,
+      "gross_sales": 325712.47,
+      "discounts": 10389.16,
+      "revenue": 315323.31,
+      "quantity": 274,
+      "sessions": 18329,
+      "conversion_rate": 1.593,
+      "aov": 1115.45,
+      "ad_spend": 80626.69,
+      "roas": 3.91,
+      "discount_pct": 3.19,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W27",
+      "label": "2026-06-29 to 2026-07-05",
+      "days_in_period": 7
+    },
+    {
+      "orders": 378,
+      "gross_sales": 495399.09,
+      "discounts": 21108.36,
+      "revenue": 474290.73,
+      "quantity": 377,
+      "sessions": 33474,
+      "conversion_rate": 1.129,
+      "aov": 1310.58,
+      "ad_spend": 144031.52,
+      "roas": 3.29,
+      "discount_pct": 4.26,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W28",
+      "label": "2026-07-06 to 2026-07-12",
+      "days_in_period": 7
+    },
+    {
+      "orders": 504,
+      "gross_sales": 636717.69,
+      "discounts": 26681.79,
+      "revenue": 610035.9,
+      "quantity": 539,
+      "sessions": 38739,
+      "conversion_rate": 1.301,
+      "aov": 1263.33,
+      "ad_spend": 208209.4,
+      "roas": 2.93,
+      "discount_pct": 4.19,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W29",
+      "label": "2026-07-13 to 2026-07-19",
+      "days_in_period": 7
+    },
+    {
+      "orders": 300,
+      "gross_sales": 388368.06,
+      "discounts": 19860.9,
+      "revenue": 368507.16,
+      "quantity": 324,
+      "sessions": 24086,
+      "conversion_rate": 1.246,
+      "aov": 1294.56,
+      "ad_spend": 132435.71,
+      "roas": 2.78,
+      "discount_pct": 5.11,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W30",
+      "label": "2026-07-20 to 2026-07-26",
+      "days_in_period": 7
+    },
+    {
+      "orders": 320,
+      "gross_sales": 379151.04,
+      "discounts": 16347.18,
+      "revenue": 362803.86,
+      "quantity": 258,
+      "sessions": 27131,
+      "conversion_rate": 1.179,
+      "aov": 1184.85,
+      "ad_spend": 123290.75,
+      "roas": 2.94,
+      "discount_pct": 4.31,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W31",
+      "label": "2026-07-27 to 2026-08-02",
+      "days_in_period": 7
+    },
+    {
+      "orders": 353,
+      "gross_sales": 481408.42,
+      "discounts": 22308.27,
+      "revenue": 459100.15,
+      "quantity": 382,
+      "sessions": 24958,
+      "conversion_rate": 1.414,
+      "aov": 1363.76,
+      "ad_spend": 108098.22,
+      "roas": 4.25,
+      "discount_pct": 4.63,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W32",
+      "label": "2026-08-03 to 2026-08-09",
+      "days_in_period": 7
+    },
+    {
+      "orders": 388,
+      "gross_sales": 530636.61,
+      "discounts": 24439.54,
+      "revenue": 506197.07,
+      "quantity": 411,
+      "sessions": 25028,
+      "conversion_rate": 1.55,
+      "aov": 1367.62,
+      "ad_spend": 102772.68,
+      "roas": 4.93,
+      "discount_pct": 4.61,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W33",
+      "label": "2026-08-10 to 2026-08-16",
+      "days_in_period": 7
+    },
+    {
+      "orders": 429,
+      "gross_sales": 596258.94,
+      "discounts": 28010.99,
+      "revenue": 568247.95,
+      "quantity": 484,
+      "sessions": 22913,
+      "conversion_rate": 1.872,
+      "aov": 1389.88,
+      "ad_spend": 93017.54,
+      "roas": 6.11,
+      "discount_pct": 4.7,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W34",
+      "label": "2026-08-17 to 2026-08-23",
+      "days_in_period": 7
+    },
+    {
+      "orders": 19,
+      "gross_sales": 38989.31,
+      "discounts": 3901.67,
+      "revenue": 35087.64,
+      "quantity": 24,
+      "sessions": 1460,
+      "conversion_rate": 1.301,
+      "aov": 2052.07,
+      "ad_spend": 5844.99,
+      "roas": 6.0,
+      "discount_pct": 10.01,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-W35",
+      "label": "2026-08-24 to 2026-08-24",
+      "days_in_period": 1
+    }
+  ],
+  "monthly": [
+    {
+      "orders": 147,
+      "gross_sales": 133667.11,
+      "discounts": 5456.15,
+      "revenue": 128210.96,
+      "quantity": 72,
+      "sessions": 7995,
+      "conversion_rate": 1.839,
+      "aov": 909.3,
+      "ad_spend": 37610.31,
+      "roas": 3.41,
+      "discount_pct": 4.08,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-06",
+      "label": "2026-06",
+      "days_in_period": 6
+    },
+    {
+      "orders": 1634,
+      "gross_sales": 2028878.55,
+      "discounts": 86333.91,
+      "revenue": 1942544.64,
+      "quantity": 1633,
+      "sessions": 128706,
+      "conversion_rate": 1.27,
+      "aov": 1241.66,
+      "ad_spend": 632214.97,
+      "roas": 3.07,
+      "discount_pct": 4.26,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-07",
+      "label": "2026-07",
+      "days_in_period": 31
+    },
+    {
+      "orders": 1295,
+      "gross_sales": 1779439.5,
+      "discounts": 84555.12,
+      "revenue": 1694884.38,
+      "quantity": 1409,
+      "sessions": 83102,
+      "conversion_rate": 1.558,
+      "aov": 1374.08,
+      "ad_spend": 345451.37,
+      "roas": 4.91,
+      "discount_pct": 4.75,
+      "cod_order_pct": 39.0,
+      "prepaid_order_pct": 61.0,
+      "cod_value_pct": 36.0,
+      "prepaid_value_pct": 64.0,
+      "period": "2026-08",
+      "label": "2026-08",
+      "days_in_period": 24
+    }
+  ]
+}
+</script>
+<script>
+(function () {
+  "use strict";
+  var DATA = JSON.parse(document.getElementById('dashboard-data').textContent);
+
+  // ---------- theme ----------
+  var themeBtn = document.getElementById('theme-toggle');
+  function applyTheme(t) {
+    if (t) { document.documentElement.setAttribute('data-theme', t); }
+    else { document.documentElement.removeAttribute('data-theme'); }
+    themeBtn.textContent = (t === 'dark') ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+  try {
+    var saved = localStorage.getItem('elan-dash-theme');
+    if (saved) applyTheme(saved);
+  } catch (e) {}
+  themeBtn.addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem('elan-dash-theme', next); } catch (e) {}
+    render();
+  });
+
+  // ---------- formatting ----------
+  function fmtINRCompact(v) {
+    var sign = v < 0 ? '-' : '';
+    var a = Math.abs(v);
+    if (a >= 1e7) return sign + '₹' + (a / 1e7).toFixed(2) + ' Cr';
+    if (a >= 1e5) return sign + '₹' + (a / 1e5).toFixed(2) + ' L';
+    if (a >= 1e3) return sign + '₹' + (a / 1e3).toFixed(1) + 'K';
+    return sign + '₹' + a.toFixed(0);
+  }
+  function fmtINRFull(v) {
+    return '₹' + Math.round(v).toLocaleString('en-IN');
+  }
+  function fmtNum(v) { return Number(v).toLocaleString('en-IN'); }
+  function fmtPct(v, d) { return Number(v).toFixed(d == null ? 1 : d) + '%'; }
+  function fmtDate(d) {
+    var dt = new Date(d + 'T00:00:00Z');
+    return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+  function fmtDateShort(d) {
+    var dt = new Date(d + 'T00:00:00Z');
+    return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+  }
+
+  // ---------- state ----------
+  var state = { gran: 'daily', index: 0 };
+
+  function seriesFor(gran) { return DATA[gran]; }
+  function labelFor(gran, row) {
+    if (gran === 'daily') return fmtDate(row.date);
+    if (gran === 'weekly') return 'Week ' + row.period.split('-W')[1] + ' · ' + row.label;
+    return new Date(row.period + '-01T00:00:00Z').toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }
+  function shortLabelFor(gran, row) {
+    if (gran === 'daily') return fmtDateShort(row.date);
+    if (gran === 'weekly') return 'W' + row.period.split('-W')[1];
+    return new Date(row.period + '-01T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' });
+  }
+
+  function populatePeriodPicker() {
+    var rows = seriesFor(state.gran);
+    var sel = document.getElementById('period-picker');
+    sel.innerHTML = '';
+    rows.forEach(function (row, i) {
+      var opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = labelFor(state.gran, row);
+      sel.appendChild(opt);
+    });
+    state.index = rows.length - 1;
+    sel.value = state.index;
+  }
+
+  // ---------- KPI cards ----------
+  var KPI_DEFS = [
+    { key: 'orders', label: 'Gross Orders', fmt: function (v) { return fmtNum(v); }, spark: true },
+    { key: 'gross_sales', label: 'Gross Sale', fmt: fmtINRCompact, spark: true },
+    { key: 'quantity', label: 'Gross Quantity', fmt: function (v) { return fmtNum(v) + ' units'; }, spark: true },
+    { key: 'conversion_rate', label: 'Conversion %', fmt: function (v) { return fmtPct(v, 2); }, spark: true },
+    { key: 'aov', label: 'AOV', fmt: fmtINRCompact, spark: true },
+    { key: 'revenue', label: 'Revenue (Gross − Discount)', fmt: fmtINRCompact, spark: true },
+    { key: 'roas', label: 'ROAS', fmt: function (v) { return v == null ? '—' : v.toFixed(2) + 'x'; }, spark: true },
+    { key: 'discount_pct', label: 'Discount %', fmt: function (v) { return fmtPct(v, 2); }, spark: true, invert: true },
+    { key: 'sessions', label: 'Total Sessions', fmt: fmtNum, spark: true },
+  ];
+
+  function buildSparkPath(values, w, h, pad) {
+    var vals = values.map(function (v) { return v == null ? 0 : v; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if (min === max) { min -= 1; max += 1; }
+    var n = vals.length;
+    var pts = vals.map(function (v, i) {
+      var x = pad + (i / (n - 1 || 1)) * (w - pad * 2);
+      var y = pad + (1 - (v - min) / (max - min)) * (h - pad * 2);
+      return [x, y];
+    });
+    var d = pts.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
+    return { d: d, last: pts[pts.length - 1] };
+  }
+
+  function sparkSVG(values, colorVar) {
+    var w = 200, h = 34, pad = 3;
+    var built = buildSparkPath(values, w, h, pad);
+    var color = 'var(' + colorVar + ')';
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+      '<path d="' + built.d + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>' +
+      '<circle cx="' + built.last[0].toFixed(1) + '" cy="' + built.last[1].toFixed(1) + '" r="3" fill="' + color + '"/>' +
+      '</svg>';
+  }
+
+  function deltaChip(cur, prev, invert) {
+    if (prev == null || cur == null || prev === 0) return '<span class="delta-chip flat">—</span>';
+    var pct = ((cur - prev) / Math.abs(prev)) * 100;
+    var good = invert ? pct <= 0 : pct >= 0;
+    var cls = Math.abs(pct) < 0.05 ? 'flat' : (good ? 'up' : 'down');
+    var arrow = pct > 0 ? '▲' : (pct < 0 ? '▼' : '•');
+    return '<span class="delta-chip ' + cls + '">' + arrow + ' ' + Math.abs(pct).toFixed(1) + '%</span>';
+  }
+
+  function renderKPIs() {
+    var rows = seriesFor(state.gran);
+    var cur = rows[state.index];
+    var prev = rows[state.index - 1];
+    var grid = document.getElementById('kpi-grid');
+    grid.innerHTML = '';
+
+    var lookback = state.gran === 'daily' ? 14 : (state.gran === 'weekly' ? 10 : 3);
+    var histStart = Math.max(0, state.index - lookback + 1);
+    var hist = rows.slice(histStart, state.index + 1);
+
+    KPI_DEFS.forEach(function (def) {
+      var card = document.createElement('div');
+      card.className = 'kpi-card';
+      var val = cur[def.key];
+      var sparkColor = '--brand-maroon-ink';
+      var values = hist.map(function (r) { return r[def.key]; });
+      card.innerHTML =
+        '<div class="kpi-label">' + def.label + '</div>' +
+        '<div class="kpi-value-row"><div class="kpi-value tabular">' + def.fmt(val) + '</div>' + deltaChip(val, prev ? prev[def.key] : null, def.invert) + '</div>' +
+        (def.spark ? '<div class="kpi-spark">' + sparkSVG(values, sparkColor) + '</div>' : '');
+      grid.appendChild(card);
+    });
+
+    // COD / Prepaid mini card
+    var card = document.createElement('div');
+    card.className = 'kpi-card';
+    card.innerHTML =
+      '<div class="kpi-label">COD / Prepaid Split</div>' +
+      '<div class="kpi-value-row"><div class="kpi-value tabular" style="font-size:19px">' + cur.cod_order_pct.toFixed(0) + '% / ' + cur.prepaid_order_pct.toFixed(0) + '%</div></div>' +
+      '<div class="split-bar-wrap">' +
+      '<div class="split-bar"><div style="width:' + cur.cod_order_pct + '%;background:var(--series-cod)"></div><div style="width:' + cur.prepaid_order_pct + '%;background:var(--series-prepaid)"></div></div>' +
+      '<div class="split-legend"><span><span class="dot" style="background:var(--series-cod)"></span>COD</span><span><span class="dot" style="background:var(--series-prepaid)"></span>Prepaid</span></div>' +
+      '</div>';
+    grid.appendChild(card);
+  }
+
+  // ---------- split panel ----------
+  function renderSplit() {
+    var rows = seriesFor(state.gran);
+    var cur = rows[state.index];
+    document.getElementById('cod-fill').style.width = cur.cod_order_pct + '%';
+    document.getElementById('cod-fill').textContent = cur.cod_order_pct.toFixed(0) + '%';
+    document.getElementById('prepaid-fill').style.width = cur.prepaid_order_pct + '%';
+    document.getElementById('prepaid-fill').textContent = cur.prepaid_order_pct.toFixed(0) + '%';
+    document.getElementById('cod-amount').textContent = Math.round(cur.orders * cur.cod_order_pct / 100) + ' orders';
+    document.getElementById('prepaid-amount').textContent = Math.round(cur.orders * cur.prepaid_order_pct / 100) + ' orders';
+    document.getElementById('split-basis-note').textContent =
+      'By order value: COD ' + cur.cod_value_pct.toFixed(0) + '% · Prepaid ' + cur.prepaid_value_pct.toFixed(0) + '%';
+  }
+
+  // ---------- line charts (generic, up to 2 series, shared axis) ----------
+  function niceMax(v) {
+    if (v <= 0) return 1;
+    var mag = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v / mag;
+    var f = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return f * mag;
+  }
+
+  function renderLineChart(opts) {
+    // opts: svgId, wrapId, tooltipId, rows, series: [{key, colorVar, label, currency}], labelFn
+    var svg = document.getElementById(opts.svgId);
+    var wrap = document.getElementById(opts.wrapId);
+    var tooltip = document.getElementById(opts.tooltipId);
+    var W = 640, H = svg.viewBox.baseVal.height || 260;
+    var padL = 46, padR = 10, padT = 14, padB = 26;
+    var rows = opts.rows;
+    var n = rows.length;
+
+    var allVals = [];
+    opts.series.forEach(function (s) {
+      rows.forEach(function (r) { if (r[s.key] != null) allVals.push(r[s.key]); });
+    });
+    var maxV = niceMax(Math.max.apply(null, allVals.concat([1])));
+    var minV = 0;
+
+    function x(i) { return padL + (n <= 1 ? 0 : (i / (n - 1)) * (W - padL - padR)); }
+    function y(v) { return padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB); }
+
+    var svgns = 'http://www.w3.org/2000/svg';
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // gridlines + y labels
+    var steps = 4;
+    for (var g = 0; g <= steps; g++) {
+      var gv = maxV * g / steps;
+      var gy = y(gv);
+      var line = document.createElementNS(svgns, 'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
+      line.setAttribute('y1', gy); line.setAttribute('y2', gy);
+      line.setAttribute('class', 'gridline');
+      svg.appendChild(line);
+      var txt = document.createElementNS(svgns, 'text');
+      txt.setAttribute('x', 4); txt.setAttribute('y', gy + 3);
+      txt.setAttribute('class', 'axis-label');
+      txt.textContent = opts.yFmt ? opts.yFmt(gv) : gv;
+      svg.appendChild(txt);
+    }
+
+    // x labels (evenly spaced indices, first & last always included, no overlap)
+    var maxLabels = Math.min(n, 7);
+    var tickIdx = [];
+    for (var t = 0; t < maxLabels; t++) {
+      var idx = Math.round((t / (maxLabels - 1 || 1)) * (n - 1));
+      if (tickIdx.indexOf(idx) === -1) tickIdx.push(idx);
+    }
+    tickIdx.forEach(function (i) {
+      var txt = document.createElementNS(svgns, 'text');
+      txt.setAttribute('x', x(i)); txt.setAttribute('y', H - 6);
+      txt.setAttribute('class', 'axis-label');
+      txt.setAttribute('text-anchor', i === n - 1 ? 'end' : (i === 0 ? 'start' : 'middle'));
+      txt.textContent = opts.labelFn(rows[i], true);
+      svg.appendChild(txt);
+    });
+
+    // series lines
+    opts.series.forEach(function (s) {
+      var d = '';
+      rows.forEach(function (r, i) {
+        var v = r[s.key];
+        if (v == null) return;
+        d += (d === '' ? 'M' : 'L') + x(i).toFixed(1) + ',' + y(v).toFixed(1) + ' ';
+      });
+      var path = document.createElementNS(svgns, 'path');
+      path.setAttribute('d', d.trim());
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'var(' + s.colorVar + ')');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+    });
+
+    // crosshair
+    var crosshair = document.createElementNS(svgns, 'line');
+    crosshair.setAttribute('class', 'crosshair');
+    crosshair.setAttribute('y1', padT); crosshair.setAttribute('y2', H - padB);
+    svg.appendChild(crosshair);
+
+    var dots = opts.series.map(function (s) {
+      var c = document.createElementNS(svgns, 'circle');
+      c.setAttribute('r', 4);
+      c.setAttribute('fill', 'var(' + s.colorVar + ')');
+      c.setAttribute('stroke', 'var(--surface)');
+      c.setAttribute('stroke-width', '2');
+      c.setAttribute('opacity', '0');
+      svg.appendChild(c);
+      return c;
+    });
+
+    function updateAt(i, showTooltip) {
+      i = Math.max(0, Math.min(n - 1, i));
+      var row = rows[i];
+      var px = x(i);
+      crosshair.setAttribute('x1', px); crosshair.setAttribute('x2', px);
+      crosshair.style.opacity = 1;
+      var html = '<div style="font-weight:700;margin-bottom:4px">' + opts.labelFn(row, false) + '</div>';
+      opts.series.forEach(function (s, si) {
+        var v = row[s.key];
+        dots[si].setAttribute('cx', px);
+        dots[si].setAttribute('cy', y(v == null ? 0 : v));
+        dots[si].style.opacity = v == null ? 0 : 1;
+        html += '<div class="t-row"><span><span class="t-dot" style="background:var(' + s.colorVar + ')"></span>' + s.label + '</span><span>' + (v == null ? '—' : (opts.yFmt ? opts.yFmt(v) : v)) + '</span></div>';
+      });
+      if (showTooltip) {
+        tooltip.innerHTML = html;
+        tooltip.style.opacity = 1;
+        var tipRect = wrap.getBoundingClientRect();
+        var left = (px / W) * tipRect.width;
+        left = Math.max(50, Math.min(tipRect.width - 50, left));
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = '0px';
+      }
+    }
+    function handleLeave() {
+      crosshair.style.opacity = 0;
+      dots.forEach(function (d) { d.style.opacity = 0; });
+      tooltip.style.opacity = 0;
+    }
+    function handleMove(clientX) {
+      var rect = svg.getBoundingClientRect();
+      if (!rect.width) return;
+      var relX = (clientX - rect.left) / rect.width * W;
+      var i = Math.round((relX - padL) / (W - padL - padR) * (n - 1));
+      updateAt(i, true);
+    }
+    svg.onpointermove = function (e) { handleMove(e.clientX); };
+    svg.onpointerleave = handleLeave;
+    // resting state: last point's dots visible, no tooltip until hover
+    updateAt(n - 1, false);
+    crosshair.style.opacity = 0;
+  }
+
+  function currentRange(rows, gran) {
+    var maxPoints = gran === 'daily' ? 30 : (gran === 'weekly' ? 10 : 12);
+    var end = state.index + 1;
+    var start = Math.max(0, end - maxPoints);
+    return rows.slice(start, end);
+  }
+
+  function renderTrendChart() {
+    var rows = seriesFor(state.gran);
+    var view = currentRange(rows, state.gran);
+    document.getElementById('trend-range-note').textContent =
+      view.length + (state.gran === 'daily' ? ' days' : state.gran === 'weekly' ? ' weeks' : ' months') + ' shown, ending at selected period';
+    renderLineChart({
+      svgId: 'trend-chart', wrapId: 'trend-chart-wrap', tooltipId: 'trend-tooltip',
+      rows: view,
+      series: [
+        { key: 'revenue', colorVar: '--series-revenue', label: 'Revenue' },
+        { key: 'ad_spend', colorVar: '--series-spend', label: 'Ad Spend' }
+      ],
+      labelFn: function (r, short) { return short ? shortLabelFor(state.gran, r) : labelFor(state.gran, r); },
+      yFmt: fmtINRCompact
+    });
+  }
+
+  function renderOSChart() {
+    var rows = seriesFor(state.gran);
+    var view = currentRange(rows, state.gran);
+    var labelFn = function (r, short) { return short ? shortLabelFor(state.gran, r) : labelFor(state.gran, r); };
+    var yFmt = function (v) { return fmtNum(Math.round(v)); };
+    renderLineChart({
+      svgId: 'orders-chart', wrapId: 'orders-chart-wrap', tooltipId: 'orders-tooltip',
+      rows: view,
+      series: [{ key: 'orders', colorVar: '--series-revenue', label: 'Orders' }],
+      labelFn: labelFn, yFmt: yFmt
+    });
+    renderLineChart({
+      svgId: 'sessions-chart', wrapId: 'sessions-chart-wrap', tooltipId: 'sessions-tooltip',
+      rows: view,
+      series: [{ key: 'sessions', colorVar: '--brand-slate', label: 'Sessions' }],
+      labelFn: labelFn, yFmt: yFmt
+    });
+  }
+
+  // ---------- data table ----------
+  var TABLE_COLS = [
+    { key: 'label', label: 'Period' },
+    { key: 'orders', label: 'Gross Orders', fmt: fmtNum },
+    { key: 'gross_sales', label: 'Gross Sale', fmt: fmtINRFull },
+    { key: 'quantity', label: 'Gross Qty', fmt: fmtNum },
+    { key: 'conversion_rate', label: 'Conv %', fmt: function (v) { return fmtPct(v, 2); } },
+    { key: 'aov', label: 'AOV', fmt: fmtINRFull },
+    { key: 'revenue', label: 'Revenue', fmt: fmtINRFull },
+    { key: 'roas', label: 'ROAS', fmt: function (v) { return v == null ? '—' : v.toFixed(2) + 'x'; } },
+    { key: 'discount_pct', label: 'Discount %', fmt: function (v) { return fmtPct(v, 2); } },
+    { key: 'sessions', label: 'Sessions', fmt: fmtNum },
+    { key: 'cod_order_pct', label: 'COD %', fmt: function (v) { return fmtPct(v, 0); } },
+    { key: 'prepaid_order_pct', label: 'Prepaid %', fmt: function (v) { return fmtPct(v, 0); } }
+  ];
+
+  function renderTable() {
+    var rows = seriesFor(state.gran);
+    var cols = TABLE_COLS.slice();
+    if (state.gran !== 'daily') cols.splice(1, 0, { key: 'days_in_period', label: 'Days' });
+    var thead = document.querySelector('#data-table thead');
+    var tbody = document.querySelector('#data-table tbody');
+    thead.innerHTML = '<tr>' + cols.map(function (c) { return '<th>' + c.label + '</th>'; }).join('') + '</tr>';
+    tbody.innerHTML = rows.slice().reverse().map(function (r) {
+      var label = state.gran === 'daily' ? fmtDate(r.date) : labelFor(state.gran, r);
+      if (state.gran !== 'daily' && isPartial(state.gran, r)) label += ' *';
+      return '<tr>' + cols.map(function (c) {
+        if (c.key === 'label') return '<td>' + label + '</td>';
+        var v = r[c.key];
+        return '<td>' + (c.fmt ? c.fmt(v) : v) + '</td>';
+      }).join('') + '</tr>';
+    }).join('') + (state.gran !== 'daily' ? '<tr><td colspan="' + cols.length + '" style="text-align:left;color:var(--text-muted);font-size:11px;border-bottom:none">* partial period — fewer days of data than a full ' + (state.gran === 'weekly' ? 'week' : 'month') + '</td></tr>' : '');
+  }
+
+  // ---------- header / meta ----------
+  function daysInMonth(period) {
+    var parts = period.split('-');
+    return new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10), 0)).getUTCDate();
+  }
+  function isPartial(gran, row) {
+    if (gran === 'weekly') return row.days_in_period < 7;
+    if (gran === 'monthly') return row.days_in_period < daysInMonth(row.period);
+    return false;
+  }
+  function renderHeading() {
+    var rows = seriesFor(state.gran);
+    var cur = rows[state.index];
+    var title = labelFor(state.gran, cur);
+    if (isPartial(state.gran, cur)) title += ' (partial — ' + cur.days_in_period + ' day' + (cur.days_in_period === 1 ? '' : 's') + ' of data)';
+    document.getElementById('period-title').textContent = title;
+    document.getElementById('period-range').textContent =
+      state.gran === 'daily' ? 'Daily view' : (state.gran === 'weekly' ? cur.label : 'Monthly view');
+  }
+
+  function renderFooter() {
+    document.getElementById('shop-meta').textContent = DATA.meta.shop + ' · ' + DATA.meta.currency;
+    var ul = document.getElementById('notes-list');
+    ul.innerHTML = DATA.meta.notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
+    var gen = new Date(DATA.meta.generated_at);
+    document.getElementById('generated-note').textContent =
+      'Data generated ' + gen.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) +
+      ' · covers ' + DATA.meta.range.from + ' to ' + DATA.meta.range.to +
+      '. Re-run dashboard/fetch_metrics.py to refresh.';
+  }
+
+  function render() {
+    renderHeading();
+    renderKPIs();
+    renderSplit();
+    renderTrendChart();
+    renderOSChart();
+    renderTable();
+  }
+
+  // ---------- wiring ----------
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.setAttribute('aria-selected', 'false'); });
+      btn.setAttribute('aria-selected', 'true');
+      state.gran = btn.getAttribute('data-gran');
+      populatePeriodPicker();
+      render();
+    });
+  });
+  document.getElementById('period-picker').addEventListener('change', function (e) {
+    state.index = parseInt(e.target.value, 10);
+    render();
+  });
+  window.addEventListener('resize', function () { renderTrendChart(); renderOSChart(); });
+
+  populatePeriodPicker();
+  renderFooter();
+  render();
+})();
+</script>
+</body>
+</html>
