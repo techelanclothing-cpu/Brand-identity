@@ -38,7 +38,9 @@ query { products(first: 100, sortKey: ID, after: CURSOR) {
 ```
 
 **`raw/sales_rows.json`** — array of `{day, product_variant_id, net_items_sold}`
-covering the last 30 days ending yesterday, via `shopifyqlQuery`:
+covering the last **90 days** ending yesterday (the size curves need the long
+window; the run rates and trend are sliced out of the same pull), via
+`shopifyqlQuery`:
 
 ```graphql
 query { shopifyqlQuery(query: "FROM sales SHOW net_items_sold GROUP BY product_variant_id TIMESERIES day SINCE <start> UNTIL <end>") {
@@ -53,7 +55,9 @@ query { shopifyqlQuery(query: "FROM sales SHOW net_items_sold GROUP BY product_v
 1. **ShopifyQL silently truncates at 1000 rows.** A 30-day per-variant pull
    exceeds it and returns 1000 rows with no error, dropping the most recent
    days — exactly the ones the run rates need. Pull in **4-day chunks** and
-   treat any chunk returning 1000 rows as truncated.
+   treat any chunk returning 1000 rows as truncated. At current volumes a
+   10-day chunk lands near 600 rows; three chunks fit in one call as separate
+   aliases, each with its own row budget.
 2. **Always reconcile before building.** Sum `net_items_sold` per day across
    variants and check it equals the store-level `daily_totals` for that day. If
    a day disagrees, the pull is incomplete — do not publish it.

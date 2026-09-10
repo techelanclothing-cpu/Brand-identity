@@ -17,6 +17,7 @@ Environment variables required:
 
 Optional:
   TREND_DAYS               days of store-level history for the trend (default 30)
+  CURVE_DAYS               days of per-variant history for the size curves (default 90)
   RUN_RATE_END             last complete day, YYYY-MM-DD (default: yesterday)
 
 Usage:
@@ -140,14 +141,18 @@ def main():
     domain = env("SHOPIFY_STORE_DOMAIN")
     token = env("SHOPIFY_ACCESS_TOKEN")
     trend_days = int(os.environ.get("TREND_DAYS", "30"))
+    # The size curves need a long window: per-size splits over a week or a month
+    # are mostly noise, and the availability correction needs enough history to
+    # see when a size was out of stock.
+    curve_days = int(os.environ.get("CURVE_DAYS", "90"))
 
     end = os.environ.get("RUN_RATE_END")
     end = (datetime.date.fromisoformat(end) if end
            else datetime.date.today() - datetime.timedelta(days=1))
     trend_start = end - datetime.timedelta(days=trend_days - 1)
-    # The run rates need the last 7 complete days; pull the whole trend window
-    # so the same file also backs the daily chart.
-    rr_start = min(trend_start, end - datetime.timedelta(days=6))
+    # One per-variant pull backs all three: the 1/3/7-day run rates, the daily
+    # chart, and the size curves. Take the longest window any of them needs.
+    rr_start = min(trend_start, end - datetime.timedelta(days=max(curve_days, 7) - 1))
 
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "raw")
     os.makedirs(out_dir, exist_ok=True)

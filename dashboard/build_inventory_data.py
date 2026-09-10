@@ -36,6 +36,103 @@ def size_sort_key(size):
     return (2, 0, s)
 
 
+# Products need this much evidence before their own size curve is trusted at all.
+CURVE_MIN_UNITS = 20
+CURVE_MIN_SIZES = 3
+# Shrinkage constant: with n units of evidence a product's own curve carries
+# weight n/(n+SHRINK_K), the rest coming from its category's baseline curve.
+SHRINK_K = 25
+
+
+def size_system(size):
+    return "numeric" if (size or "").strip().isdigit() else "alpha"
+
+
+def build_curves(products, sold, days):
+    """Size demand curves, corrected for stock-out censoring.
+
+    A size that sells out stops selling, so raw units understate its demand.
+    Stock is walked backwards from today's level to work out how many days each
+    size was actually available, and demand is measured per available day.
+
+    The walk cannot see restocks, so it overstates how long a size was in stock,
+    which understates its demand rate. The correction is therefore conservative:
+    it never inflates a size beyond what the data supports.
+    """
+    vp, pp = "gid://shopify/ProductVariant/", "gid://shopify/Product/"
+    vinfo = {}
+    for p in products:
+        for v in p["variants"]["nodes"]:
+            vinfo[v["id"].replace(vp, "")] = {
+                "pid": p["id"].replace(pp, ""), "ptitle": p["title"],
+                "size": v["title"], "stock": v.get("inventoryQuantity") or 0,
+            }
+
+    for vid, info in vinfo.items():
+        series = sold.get(vid, {})
+        running, avail = info["stock"], 0
+        for d in reversed(days):
+            start = running + series.get(d, 0)
+            if start > 0:
+                avail += 1
+            running = start
+        info["units"] = sum(max(v, 0) for v in series.values())
+        info["avail_days"] = avail
+        info["oos_days"] = len(days) - avail
+        info["rate"] = info["units"] / avail if avail else 0.0
+
+    def norm(d):
+        t = sum(d.values())
+        return {k: v / t for k, v in d.items()} if t > 0 else {}
+
+    baseline = {}
+    for sysname in ("alpha", "numeric"):
+        agg = defaultdict(float)
+        for info in vinfo.values():
+            if size_system(info["size"]) == sysname:
+                agg[info["size"]] += info["rate"]
+        baseline[sysname] = norm(dict(agg))
+
+    by_product = defaultdict(list)
+    for info in vinfo.values():
+        by_product[info["pid"]].append(info)
+
+    out = []
+    for pid, vs in by_product.items():
+        units = sum(v["units"] for v in vs)
+        if units < CURVE_MIN_UNITS or len(vs) < CURVE_MIN_SIZES:
+            continue
+        adj = norm({v["size"]: v["rate"] for v in vs})
+        if not adj:
+            continue
+        raw = norm({v["size"]: v["units"] for v in vs})
+        sysname = size_system(vs[0]["size"])
+        base = baseline[sysname]
+        w = units / (units + SHRINK_K)
+        sizes = sorted({v["size"] for v in vs}, key=size_sort_key)
+        mix = norm({s: w * adj.get(s, 0) + (1 - w) * base.get(s, 1.0 / len(sizes)) for s in sizes})
+        skew = 0.5 * sum(abs(mix.get(s, 0) - base.get(s, 0)) for s in set(mix) | set(base))
+        vmap = {v["size"]: v for v in vs}
+        out.append({
+            "id": pid, "title": vs[0]["ptitle"], "system": sysname,
+            "units": units, "confidence": round(w, 3), "skew": round(skew, 4),
+            "lost": round(sum(v["oos_days"] * v["rate"] for v in vs), 1),
+            "sizes": [{
+                "size": s, "stock": vmap[s]["stock"], "units": vmap[s]["units"],
+                "oos_days": vmap[s]["oos_days"],
+                "raw": round(raw.get(s, 0), 4), "mix": round(mix.get(s, 0), 4),
+            } for s in sizes],
+        })
+
+    out.sort(key=lambda r: -r["units"])
+    return {
+        "baseline": {k: {s: round(v, 4) for s, v in c.items()} for k, c in baseline.items()},
+        "window": {"from": days[0], "to": days[-1], "days": len(days)},
+        "min_units": CURVE_MIN_UNITS,
+        "products": out,
+    }
+
+
 def build(products, sales_rows, daily_totals, end_date):
     end = datetime.date.fromisoformat(end_date)
     win = {
@@ -46,15 +143,21 @@ def build(products, sales_rows, daily_totals, end_date):
 
     # variant id -> units sold within each window
     sold = defaultdict(lambda: {"d1": 0, "d3": 0, "d7": 0})
+    # variant id -> {day: units}, over the whole pulled window, for the curves
+    series = defaultdict(dict)
+    all_days = set()
     for r in sales_rows:
         vid = r.get("product_variant_id")
+        day = r["day"][:10]
+        all_days.add(day)
         if not vid:
             continue  # rows with a null variant id are unattributed adjustments
-        day = r["day"][:10]
         qty = int(r["net_items_sold"])
+        series[vid][day] = series[vid].get(day, 0) + qty
         for k, days in win.items():
             if day in days:
                 sold[vid][k] += qty
+    curve_days = sorted(d for d in all_days if d <= end_date)
 
     def rate(units, days):
         return round(units / days, 3)
@@ -149,7 +252,10 @@ def build(products, sales_rows, daily_totals, end_date):
         "cover": cover(total_stock, total_d7 / 7),
     }
 
+    curves = build_curves(products, series, curve_days) if curve_days else None
+
     return {
+        "curves": curves,
         "meta": {
             "shop": "Elan Clothing (elanclothing.in)",
             "currency": "INR",
@@ -185,6 +291,10 @@ def main():
     print(f"  {t['units_in_stock']} units in stock, {t['variants_in_stock']} sizes in stock, {t['variants_oos']} out of stock")
     print(f"  run rate: {t['rr1']}/day (1d), {t['rr3']}/day (3d), {t['rr7']}/day (7d)")
     print(f"  days of cover at 7d rate: {t['cover']}")
+    c = data.get("curves")
+    if c:
+        print(f"  size curves: {len(c['products'])} products over {c['window']['days']} days "
+              f"({c['window']['from']} to {c['window']['to']})")
 
 
 if __name__ == "__main__":

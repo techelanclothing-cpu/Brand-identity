@@ -101,6 +101,8 @@ on hand** and **how fast it is selling**:
 - Units-sold-per-day trend over 30 days, against the 7-day average
 - Stock mix vs. demand mix by size — which sizes are over- or under-weighted
 - **Top 10 and bottom 10 sellers**, rankable over the 1-, 3- or 7-day window
+- **Size curve and reorder calculator** — per-product size mix corrected for stock-outs
+- **Demand lost to stock-outs** — units each product likely never sold because a size was gone
 - A reorder watchlist of selling products with under 14 days of cover
 - Every product with its **per-size stock**, searchable, filterable and sortable
 
@@ -155,6 +157,21 @@ yesterday; `build_inventory_data.py` reads the same variable to set the windows.
   runs well ahead of its demand share is overweight.
 - **Top 10 sellers** — products ranked by units sold in the selected window
   (1, 3 or 7 days), most first, ties broken by stock on hand.
+- **Reorder mix** — each product's size demand over 90 days, corrected for
+  stock-out censoring. A size that sells out stops selling, so raw units
+  understate it; demand is measured **per day the size was actually in stock**.
+  Availability is reconstructed by walking stock backwards from today's level,
+  which cannot see restocks and so overstates how long a size was available —
+  the correction is therefore conservative and never inflates a size beyond
+  what the data supports. Products with thin data have their own curve blended
+  toward the average curve for their size system (alpha for shirts, numeric for
+  trousers), weighted `n / (n + 25)` by units sold, so a product with 30 units
+  leans about half on its own history. Only products with 20+ units and 3+
+  sizes qualify — below that the split is noise. Per-size order quantities use
+  largest-remainder allocation so they total exactly the quantity entered.
+- **Demand lost to stock-outs** — for each size, days out of stock × that
+  size's demand rate on the days it *was* in stock. It is an estimate of sales
+  that never happened, and appears nowhere in the sales figures.
 - **Bottom 10 sellers** — only products that **still hold stock**: a sold-out
   product is gone, not dead stock. Most of the catalogue sells nothing in a given
   week (515 of the 606 stocked products, over the 7-day window), so a raw "bottom
