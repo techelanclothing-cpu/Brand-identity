@@ -227,6 +227,17 @@
   .legend .item { display: inline-flex; align-items: center; gap: 6px; }
   .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 
+  .runout-bar { display: flex; gap: 2px; height: 26px; border-radius: 7px; overflow: hidden; margin: 4px 0 16px; }
+  .runout-bar span { display: block; height: 100%; min-width: 2px; }
+  .band-sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; vertical-align: -1px; margin-right: 7px; }
+  #bandTable td:first-child, #bandTable th:first-child { white-space: nowrap; }
+  .size-chip .left { font-size: 10px; font-weight: 700; }
+  .size-chip .left.critical { color: var(--status-ink-critical); }
+  .size-chip .left.serious { color: var(--status-ink-serious); }
+  .size-chip .left.warning { color: var(--status-ink-warning); }
+  .size-chip .left.good { color: var(--status-ink-good); }
+  .size-chip .left.none { color: var(--text-muted); }
+
   .seller-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
   .seller-card { min-width: 0; }
   #topTable td:nth-child(2), #botTable td:nth-child(2) { white-space: normal; min-width: 150px; }
@@ -283,6 +294,25 @@
     <p id="rateIntro"></p>
   </div>
   <div class="rate-grid" id="rateGrid"></div>
+
+  <div class="section-head">
+    <h2>Remaining days of inventory</h2>
+    <p id="runoutIntro"></p>
+  </div>
+  <div class="rate-grid" id="runoutGrid"></div>
+  <div class="card" style="margin-top:14px">
+    <h3 class="chart-title">Where the stock sits</h3>
+    <p class="chart-note" id="bandNote"></p>
+    <div class="runout-bar" id="bandBar"></div>
+    <div class="table-scroll">
+      <table id="bandTable">
+        <thead>
+          <tr><th>Remaining days</th><th>Products</th><th>Units</th><th>Stock value</th><th>% of value</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="section-head">
     <h2>Demand and cover</h2>
@@ -533,6 +563,91 @@
       '<div class="value tabular">' + rate(r.value) + '<span class="unit">units / day</span></div>' +
       '<div class="sub">' + esc(r.sub) + "</div></div>";
   }).join("");
+
+  /* ---------- remaining days of inventory ---------- */
+  /* Days remaining = units in stock / units sold per day. Reported against all
+     three run-rate windows, because which one you trust changes the answer. */
+  function daysLeft(stock, units, days) {
+    var r = units / days;
+    return r > 0 ? stock / r : null;
+  }
+  function runoutDate(days) {
+    if (days === null) return null;
+    var d = new Date(META.inventory_as_of + "T00:00:00");
+    d.setDate(d.getDate() + Math.round(days));
+    return d;
+  }
+  function runoutLabel(days) {
+    var d = runoutDate(days);
+    if (!d) return "—";
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  var BANDS = [
+    { key: "critical", label: "Under 7 days", note: "Reorder now", lo: 0, hi: 7, color: "var(--critical)" },
+    { key: "serious", label: "7 to 14 days", note: "Low", lo: 7, hi: 14, color: "var(--serious)" },
+    { key: "warning", label: "14 to 30 days", note: "Watch", lo: 14, hi: 30, color: "var(--warning)" },
+    { key: "good", label: "30 to 90 days", note: "Healthy", lo: 30, hi: 90, color: "var(--good)" },
+    { key: "over", label: "Over 90 days", note: "Overstocked", lo: 90, hi: Infinity, color: "var(--series-2)" },
+    { key: "dead", label: "No sales in 7 days", note: "No run rate to measure against", lo: null, hi: null, color: "var(--chip)" }
+  ];
+
+  function renderRunout() {
+    var stock = T.units_in_stock;
+    var tiles = [
+      { win: "At the 1-day rate", days: daysLeft(stock, T.d1, 1), rate: T.rr1 },
+      { win: "At the 3-day rate", days: daysLeft(stock, T.d3, 3), rate: T.rr3 },
+      { win: "At the 7-day rate", days: daysLeft(stock, T.d7, 7), rate: T.rr7 }
+    ];
+
+    document.getElementById("runoutIntro").textContent =
+      "How long the " + n(stock) + " units on hand last if they keep selling at each of the run rates above. " +
+      "The catalogue as a whole is deeply covered — the risk is not the total, it is the handful of fast movers below. " +
+      (T.products - T.products_in_stock) + " products hold no stock at all and are excluded.";
+
+    document.getElementById("runoutGrid").innerHTML = tiles.map(function (t) {
+      return '<div class="rate"><div class="win">' + esc(t.win) + "</div>" +
+        '<div class="value tabular">' + (t.days === null ? "—" : n(t.days)) + '<span class="unit">days left</span></div>' +
+        '<div class="sub">At ' + rate(t.rate) + " units/day, stock runs out around " + runoutLabel(t.days) + ".</div></div>";
+    }).join("");
+
+    /* Band the stocked products by their own days remaining, at the 7-day rate. */
+    var stocked = DATA.products.filter(function (p) { return p.stock > 0; });
+    var rows = BANDS.map(function (b) {
+      var sel = stocked.filter(function (p) {
+        var c = daysLeft(p.stock, p.d7, 7);
+        if (b.key === "dead") return c === null;
+        return c !== null && c >= b.lo && c < b.hi;
+      });
+      return {
+        band: b,
+        products: sel.length,
+        units: sel.reduce(function (a, p) { return a + p.stock; }, 0),
+        value: sel.reduce(function (a, p) { return a + p.value; }, 0)
+      };
+    });
+    var totV = rows.reduce(function (a, r) { return a + r.value; }, 0) || 1;
+
+    document.getElementById("bandNote").textContent =
+      "Each of the " + n(stocked.length) + " products holding stock, grouped by its own days remaining at its own 7-day run rate. " +
+      "Bar is share of stock value.";
+
+    document.getElementById("bandBar").innerHTML = rows.filter(function (r) { return r.value > 0; })
+      .map(function (r) {
+        return '<span style="width:' + (r.value / totV * 100).toFixed(2) + "%;background:" + r.band.color +
+          '" title="' + esc(r.band.label) + ": " + money(r.value) + '"></span>';
+      }).join("");
+
+    document.querySelector("#bandTable tbody").innerHTML = rows.map(function (r) {
+      return "<tr><td><span class=\"band-sw\" style=\"background:" + r.band.color +
+        (r.band.key === "dead" ? ";border:1px solid var(--border)" : "") + '"></span><b>' + esc(r.band.label) + "</b>" +
+        '<div class="prod-meta" style="margin-left:18px">' + esc(r.band.note) + "</div></td>" +
+        '<td class="tabular">' + n(r.products) + "</td>" +
+        '<td class="tabular">' + n(r.units) + "</td>" +
+        '<td class="tabular">' + money(r.value) + "</td>" +
+        '<td class="tabular">' + (r.value / totV * 100).toFixed(1) + "%</td></tr>";
+    }).join("");
+  }
 
   /* ---------- shared SVG helpers ---------- */
   var SVGNS = "http://www.w3.org/2000/svg";
@@ -882,10 +997,12 @@
   function sizeChips(p) {
     return '<div class="size-chips">' + p.variants.map(function (v) {
       var cls = v.qty <= 0 ? " oos" : (v.d7 > 0 && v.qty <= v.d7 ? " low" : "");
+      var vb = coverBand(v.cover);
       return '<span class="size-chip' + cls + '">' +
         '<span class="sz">' + esc(v.size) + "</span>" +
         '<span class="qt tabular">' + n(v.qty) + "</span>" +
-        '<span class="sold">' + (v.d7 > 0 ? "−" + n(v.d7) + " / 7d" : "no sales") + "</span></span>";
+        '<span class="sold">' + (v.d7 > 0 ? n(v.d7) + " sold / 7d" : "no sales") + "</span>" +
+        '<span class="left ' + vb.key + '">' + (v.cover === null ? "—" : coverText(v.cover) + "d left") + "</span></span>";
     }).join("") + "</div>";
   }
 
@@ -995,6 +1112,7 @@
   } catch (e) {}
 
   /* ---------- go ---------- */
+  renderRunout();
   drawTrend();
   drawCover();
   fillSizeTable();
