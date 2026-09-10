@@ -104,3 +104,26 @@ depending on a session staying alive and becomes a single command.
 The routine is told to stay quiet on a clean run, and to speak up only if the
 pull fails, the reconciliation fails, or a product has newly dropped under 7
 days of cover.
+
+## Republishing the shared link
+
+The dashboard is also published as an Artifact:
+**https://claude.ai/code/artifact/c5dd083e-74ff-4041-8e94-86b1a2596609**
+
+After rebuilding, regenerate the publishable variant and update the artifact
+**in place**:
+
+```bash
+python3 build_artifact.py    # -> inventory_artifact.html
+```
+
+Then publish with the Artifact tool passing
+`url: "https://claude.ai/code/artifact/c5dd083e-74ff-4041-8e94-86b1a2596609"`.
+**Never omit `url`** — publishing without it creates a second, separate artifact
+instead of updating this one, and the link you already shared goes stale.
+
+`build_artifact.py` exists because the repo file points at `../Gilroy-*.woff`
+and `../Elan - Wordmark - White.svg`. Those resolve inside the repo but 404 on
+the artifact origin, where Gilroy would silently fall back to system-ui. The
+script inlines them as base64 data URIs and strips the document wrapper the
+Artifact tool supplies itself.

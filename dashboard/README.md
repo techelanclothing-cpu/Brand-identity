@@ -113,6 +113,8 @@ on hand** and **how fast it is selling**:
 | `fetch_inventory.py` | Pulls products, per-variant daily sales and store daily totals from Shopify into `raw/`. |
 | `build_inventory_data.py` | Turns `raw/` into `inventory_data.json` (run rates, cover, size rollups). |
 | `build_inventory.py` | Embeds `inventory_data.json` into `inventory.html`. |
+| `build_artifact.py` | Builds `inventory_artifact.html` — fonts and logo inlined, wrapper stripped — for publishing as an Artifact. |
+| `REFRESH.md` | Runbook for the daily refresh and for republishing the shared link. |
 
 ## Refreshing the data
 
