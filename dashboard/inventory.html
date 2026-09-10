@@ -122,8 +122,26 @@
 
   main { max-width: 1240px; margin: 0 auto; padding: 24px clamp(16px, 4vw, 40px) 64px; }
 
+  .tabbar {
+    display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tabbar button {
+    border: none; background: transparent; color: var(--text-secondary);
+    font-family: inherit; font-weight: 600; font-size: 13.5px;
+    padding: 10px 15px; cursor: pointer; border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tabbar button:hover { color: var(--text-primary); background: var(--surface-2); }
+  .tabbar button[aria-selected="true"] {
+    color: var(--brand-maroon); border-bottom-color: var(--brand-maroon); background: transparent;
+  }
+  .tabbar button:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
+  .chart-solo { display: block; }
+  .chart-solo > .card { max-width: 780px; }
+
   .section-head { margin: 34px 0 14px; }
-  .section-head:first-of-type { margin-top: 8px; }
+  .panel > .section-head:first-child { margin-top: 18px; }
   .section-head h2 { font-size: 15px; font-weight: 700; margin: 0 0 4px; letter-spacing: 0.01em; }
   .section-head p { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; max-width: 78ch; }
 
@@ -301,14 +319,55 @@
 </header>
 
 <main>
+  <nav class="tabbar" id="tabbar" role="tablist" aria-label="Views">
+    <button type="button" role="tab" data-tab="today" id="tab-today" aria-controls="panel-today" aria-selected="true">Today</button>
+    <button type="button" role="tab" data-tab="rate" id="tab-rate" aria-controls="panel-rate" aria-selected="false">Run rate</button>
+    <button type="button" role="tab" data-tab="sizes" id="tab-sizes" aria-controls="panel-sizes" aria-selected="false">Sizes</button>
+    <button type="button" role="tab" data-tab="products" id="tab-products" aria-controls="panel-products" aria-selected="false">Products</button>
+  </nav>
+
+  <section class="panel" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
+
   <div class="section-head">
-    <h2>Stock on hand</h2>
+    <h2>What needs attention</h2>
     <p id="stockIntro"></p>
   </div>
   <div class="kpi-grid" id="kpiGrid"></div>
 
   <div class="section-head">
-    <h2>Daily run rate — how many units sell per day</h2>
+    <h2>Reorder watchlist</h2>
+    <p id="reorderIntro"></p>
+  </div>
+  <div class="card table-scroll">
+    <table id="reorderTable">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>In stock</th>
+          <th>Sizes out</th>
+          <th>Sold 7d</th>
+          <th>Rate 7d</th>
+          <th>Days cover</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <span class="item"><span class="swatch" style="background:var(--critical)"></span> Under 7 days of cover — reorder now</span>
+    <span class="item"><span class="swatch" style="background:var(--serious)"></span> 7–14 days</span>
+    <span class="item"><span class="swatch" style="background:var(--warning)"></span> 14–30 days</span>
+    <span class="item"><span class="swatch" style="background:var(--good)"></span> Over 30 days</span>
+    <span class="item"><span class="swatch" style="background:var(--chip);border:1px solid var(--border)"></span> No sales in the last 7 days</span>
+  </div>
+  </section>
+
+  <section class="panel" id="panel-rate" role="tabpanel" aria-labelledby="tab-rate" hidden>
+
+  <div class="section-head">
+    <h2>Daily run rate</h2>
     <p id="rateIntro"></p>
   </div>
   <div class="rate-grid" id="rateGrid"></div>
@@ -333,68 +392,24 @@
   </div>
 
   <div class="section-head">
-    <h2>Demand and cover</h2>
-    <p>Units sold per day over the last 30 complete days, and whether the stock held in each size matches the share of demand that size actually pulls. Days of cover per size sits in the table below.</p>
+    <h2>Units sold per day</h2>
+    <p>The last 30 complete days, net of returns. The dashed line is the 7-day average.</p>
   </div>
-  <div class="chart-grid">
+  <div class="chart-solo">
     <div class="card">
       <h3 class="chart-title">Units sold per day</h3>
-      <p class="chart-note">Net of returns. The dashed line is the 7-day average run rate.</p>
+      
       <div class="chart-wrap" id="trendWrap"></div>
-    </div>
-    <div class="card">
-      <h3 class="chart-title">Stock mix vs demand mix, by size</h3>
-      <p class="chart-note">Each size's share of units in stock against its share of units sold in the last 7 days. Where the stock bar runs longer than the sold bar, that size is overweight for how it actually sells.</p>
-      <div class="chart-wrap" id="coverWrap"></div>
-      <div class="legend" style="margin-top:10px">
-        <span class="item"><span class="swatch" style="background:var(--series-2)"></span> Share of stock</span>
-        <span class="item"><span class="swatch" style="background:var(--series-1)"></span> Share sold, last 7 days</span>
-      </div>
     </div>
   </div>
 
-  <div class="section-head">
-    <h2>Top and bottom sellers</h2>
-    <p id="sellerIntro"></p>
-  </div>
-  <div class="controls-row">
-    <div class="seg" id="sellerSeg" role="group" aria-label="Ranking window">
-      <button type="button" data-win="d1" aria-pressed="false">Last 1 day</button>
-      <button type="button" data-win="d3" aria-pressed="false">Last 3 days</button>
-      <button type="button" data-win="d7" aria-pressed="true">Last 7 days</button>
-    </div>
-  </div>
-  <div class="seller-grid">
-    <div class="card seller-card">
-      <h3>Top 10 sellers</h3>
-      <p class="chart-note" id="topNote"></p>
-      <div class="table-scroll">
-        <table id="topTable">
-          <thead>
-            <tr><th>#</th><th>Product</th><th>Sold</th><th>Rate</th><th>In stock</th><th>Cover</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card seller-card">
-      <h3>Bottom 10 sellers</h3>
-      <p class="chart-note" id="botNote"></p>
-      <div class="table-scroll">
-        <table id="botTable">
-          <thead>
-            <tr><th>#</th><th>Product</th><th>Sold</th><th>In stock</th><th>Sizes</th><th>Stock value</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="dead-note" id="deadNote"></div>
-    </div>
-  </div>
+  </section>
+
+  <section class="panel" id="panel-sizes" role="tabpanel" aria-labelledby="tab-sizes" hidden>
 
   <div class="section-head">
     <h2>Size breakdown</h2>
-    <p>Every size across the catalogue: what is in stock, what sold in the last 1, 3 and 7 days, and the resulting daily run rate.</p>
+    <p>Every size: stock, units sold, run rate and days of cover.</p>
   </div>
   <div class="card table-scroll">
     <table id="sizeTable">
@@ -418,28 +433,24 @@
   </div>
 
   <div class="section-head">
-    <h2>Reorder watchlist</h2>
-    <p id="reorderIntro"></p>
+    <h2>Stock mix vs demand mix</h2>
+    <p>Where the stock you hold in each size does not match the share of demand that size pulls.</p>
   </div>
-  <div class="card table-scroll">
-    <table id="reorderTable">
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>In stock</th>
-          <th>Sizes out</th>
-          <th>Sold 7d</th>
-          <th>Rate 7d</th>
-          <th>Days cover</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <div class="chart-solo">
+    <div class="card">
+      <h3 class="chart-title">Stock mix vs demand mix, by size</h3>
+      <p class="chart-note">A longer stock bar than sold bar means that size is overweight.</p>
+      <div class="chart-wrap" id="coverWrap"></div>
+      <div class="legend" style="margin-top:10px">
+        <span class="item"><span class="swatch" style="background:var(--series-2)"></span> Share of stock</span>
+        <span class="item"><span class="swatch" style="background:var(--series-1)"></span> Share sold, last 7 days</span>
+      </div>
+    </div>
   </div>
 
+
   <div class="section-head">
-    <h2>Size curve and reorder mix</h2>
+    <h2>Reorder mix by size</h2>
     <p id="mixIntro"></p>
   </div>
 
@@ -478,10 +489,52 @@
       <tbody></tbody>
     </table>
   </div>
+  </section>
+
+  <section class="panel" id="panel-products" role="tabpanel" aria-labelledby="tab-products" hidden>
+
+  <div class="section-head">
+    <h2>Best and worst sellers</h2>
+    <p id="sellerIntro"></p>
+  </div>
+  <div class="controls-row">
+    <div class="seg" id="sellerSeg" role="group" aria-label="Ranking window">
+      <button type="button" data-win="d1" aria-pressed="false">Last 1 day</button>
+      <button type="button" data-win="d3" aria-pressed="false">Last 3 days</button>
+      <button type="button" data-win="d7" aria-pressed="true">Last 7 days</button>
+    </div>
+  </div>
+  <div class="seller-grid">
+    <div class="card seller-card">
+      <h3>Top 10 sellers</h3>
+      <p class="chart-note" id="topNote"></p>
+      <div class="table-scroll">
+        <table id="topTable">
+          <thead>
+            <tr><th>#</th><th>Product</th><th>Sold</th><th>Rate</th><th>In stock</th><th>Cover</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card seller-card">
+      <h3>Bottom 10 sellers</h3>
+      <p class="chart-note" id="botNote"></p>
+      <div class="table-scroll">
+        <table id="botTable">
+          <thead>
+            <tr><th>#</th><th>Product</th><th>Sold</th><th>In stock</th><th>Sizes</th><th>Stock value</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="dead-note" id="deadNote"></div>
+    </div>
+  </div>
 
   <div class="section-head">
     <h2>Products and sizes</h2>
-    <p>Every product with its per-size stock. Select a row to see the size breakdown — each chip is a size, its stock, and what it sold in the last 7 days.</p>
+    <p>Select a row to see per-size stock and days remaining.</p>
   </div>
   <div class="controls-row">
     <input class="field" id="search" type="search" placeholder="Search product or size (e.g. Gurkha, linen, 32)" aria-label="Search products">
@@ -519,18 +572,14 @@
     <div class="more-note" id="moreNote"></div>
   </div>
 
-  <div class="legend">
-    <span class="item"><span class="swatch" style="background:var(--critical)"></span> Under 7 days of cover — reorder now</span>
-    <span class="item"><span class="swatch" style="background:var(--serious)"></span> 7–14 days</span>
-    <span class="item"><span class="swatch" style="background:var(--warning)"></span> 14–30 days</span>
-    <span class="item"><span class="swatch" style="background:var(--good)"></span> Over 30 days</span>
-    <span class="item"><span class="swatch" style="background:var(--chip);border:1px solid var(--border)"></span> No sales in the last 7 days</span>
-  </div>
 
   <footer class="notes">
     <h3>How these numbers are built</h3>
     <ul id="noteList"></ul>
   </footer>
+  </section>
+
+
 </main>
 
 <script id="inventory-data" type="application/json">
@@ -587,23 +636,20 @@
     "Stock as of " + dayLabel(META.inventory_as_of) + " · sales through " + dayLabel(META.run_rate_end);
 
   document.getElementById("stockIntro").textContent =
-    n(T.units_in_stock) + " units across " + n(T.variants_in_stock) + " in-stock size variants, spanning " +
-    n(T.products_in_stock) + " of " + n(T.products) + " products. " +
-    n(T.variants_oos) + " size variants are listed but out of stock.";
+    "Stock as of " + dayLabel(META.inventory_as_of) + ", against sales through " + dayLabel(META.run_rate_end) + ".";
 
   document.getElementById("rateIntro").textContent =
-    "Units sold per day, averaged over the last 1, 3 and 7 complete days (through " +
-    dayLabel(META.run_rate_end) + "). Today is excluded — a part-day would drag every rate down. " +
-    "Figures are net of returns, so a heavy-return day can read low.";
+    "Units sold per day over the last 1, 3 and 7 complete days. Today is excluded, and figures are net of returns.";
 
   /* ---------- KPI tiles ---------- */
+  var needsReorder = DATA.products.filter(function (p) {
+    return p.d7 > 0 && p.cover !== null && p.cover < 14;
+  }).length;
   var kpis = [
-    { label: "Units in stock", value: n(T.units_in_stock), sub: "Across " + n(T.products_in_stock) + " products" },
-    { label: "Sizes in stock", value: n(T.variants_in_stock), sub: n(T.variants) + " size variants listed in total" },
-    { label: "Sizes out of stock", value: n(T.variants_oos), sub: Math.round(T.variants_oos / T.variants * 100) + "% of listed sizes are at zero" },
-    { label: "Stock value", value: money(T.retail_value), sub: "At current retail prices" },
-    { label: "Days of cover", value: coverText(T.cover), sub: "Whole catalogue at the 7-day rate" },
-    { label: "Active products", value: n(T.products_active), sub: (T.products - T.products_active) + " draft or archived" }
+    { label: "Needs reordering", value: n(needsReorder), sub: "Selling, with under 14 days of stock left" },
+    { label: "Units in stock", value: n(T.units_in_stock), sub: money(T.retail_value) + " at retail, across " + n(T.products_in_stock) + " products" },
+    { label: "Selling per day", value: rate(T.rr7), sub: "Units per day over the last 7 days" },
+    { label: "Sizes out of stock", value: n(T.variants_oos), sub: Math.round(T.variants_oos / T.variants * 100) + "% of the " + n(T.variants) + " sizes you list" }
   ];
   document.getElementById("kpiGrid").innerHTML = kpis.map(function (k) {
     return '<div class="kpi"><div class="label">' + esc(k.label) + '</div>' +
@@ -660,9 +706,7 @@
     ];
 
     document.getElementById("runoutIntro").textContent =
-      "How long the " + n(stock) + " units on hand last if they keep selling at each of the run rates above. " +
-      "The catalogue as a whole is deeply covered — the risk is not the total, it is the handful of fast movers below. " +
-      (T.products - T.products_in_stock) + " products hold no stock at all and are excluded.";
+      "How long the " + n(stock) + " units on hand last at each rate. The total is deeply covered — the risk sits in a few fast movers, not the catalogue.";
 
     document.getElementById("runoutGrid").innerHTML = tiles.map(function (t) {
       return '<div class="rate"><div class="win">' + esc(t.win) + "</div>" +
@@ -688,8 +732,7 @@
     var totV = rows.reduce(function (a, r) { return a + r.value; }, 0) || 1;
 
     document.getElementById("bandNote").textContent =
-      "Each of the " + n(stocked.length) + " products holding stock, grouped by its own days remaining at its own 7-day run rate. " +
-      "Bar is share of stock value.";
+      "The " + n(stocked.length) + " products holding stock, by their own days remaining. Bar is share of stock value.";
 
     document.getElementById("bandBar").innerHTML = rows.filter(function (r) { return r.value > 0; })
       .map(function (r) {
@@ -927,9 +970,8 @@
     var deadUnits = dead.reduce(function (a, p) { return a + p.stock; }, 0);
 
     document.getElementById("sellerIntro").textContent =
-      "Ranked over " + winLabel(w) + ", by units sold net of returns. " +
-      dead.length + " of the " + n(stocked.length) + " products holding stock sold nothing in that window, " +
-      "so the bottom list breaks those ties by how much capital each one ties up.";
+      "Ranked over " + winLabel(w) + ". " + dead.length + " of " + n(stocked.length) +
+      " stocked products sold nothing, so the bottom list ranks those ties by capital tied up.";
 
     document.getElementById("topNote").textContent =
       top.length ? "Units sold over " + winLabel(w) + ". Bars are relative to the top seller."
@@ -1002,7 +1044,7 @@
     }).sort(function (a, b) { return a.cover - b.cover; });
 
     document.getElementById("reorderIntro").textContent = list.length
-      ? list.length + " products that are selling have under 14 days of stock left at their own 7-day run rate. Sizes already at zero are counted separately — a product can still show stock while its best-selling size is gone."
+      ? list.length + " selling products have under 14 days of stock left. A product can still show stock while its best size is gone — check the sizes column."
       : "No selling product is under 14 days of cover right now.";
 
     var tb = document.querySelector("#reorderTable tbody");
@@ -1161,11 +1203,10 @@
     if (!CURVES) return;
     var w = CURVES.window;
     document.getElementById("mixIntro").textContent =
-      "Some products sell far harder in one or two sizes than the rest. This reads each product's own size curve over " +
-      w.days + " days (" + dayLabel(w.from) + " to " + dayLabel(w.to) + ") and turns it into a reorder mix. " +
-      "A size that sells out stops selling, so raw units understate it — demand is measured per day the size was actually in stock, " +
-      "not per calendar day. Only the " + CURVES.products.length + " products with at least " + CURVES.min_units +
-      " units and 3+ sizes qualify; below that the size split is noise.";
+      "Pick a product and a quantity to get units per size, from its own " + w.days +
+      "-day size curve. A size that sells out stops selling, so demand is counted per day the size was in stock — " +
+      "otherwise your fastest sizes come out under-ordered. " + CURVES.products.length +
+      " products have enough sales to qualify.";
   }
 
   function fillProductSelect() {
@@ -1235,7 +1276,7 @@
       .slice().sort(function (a, b) { return b.lost - a.lost; }).slice(0, 12);
 
     document.getElementById("lostIntro").textContent = list.length
-      ? "Units these products would likely have sold if the size had been on the shelf, estimated from each size's own demand rate on the days it was in stock. This is the cost of the size mix being wrong, and it does not appear anywhere in your sales figures."
+      ? "Units likely not sold because a size was off the shelf. None of this shows up in your sales figures."
       : "No product lost meaningful demand to stock-outs over the window.";
 
     document.querySelector("#lostTable tbody").innerHTML = list.map(function (p) {
@@ -1259,6 +1300,43 @@
     document.getElementById("mixQty").addEventListener("input", renderMix);
   }
 
+  /* ---------- tabs ---------- */
+  /* Charts measure themselves against a live box, so a chart drawn while its
+     panel is hidden gets a zero-width hit layer. Redraw on show instead. */
+  var REDRAW = { rate: drawTrend, sizes: drawCover };
+
+  function showTab(key) {
+    var bar = document.getElementById("tabbar");
+    [].forEach.call(bar.querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-selected", String(b.dataset.tab === key));
+    });
+    [].forEach.call(document.querySelectorAll(".panel"), function (s) {
+      s.hidden = s.id !== "panel-" + key;
+    });
+    if (REDRAW[key]) REDRAW[key]();
+    try { localStorage.setItem("elan-inv-tab", key); } catch (e) {}
+  }
+
+  document.getElementById("tabbar").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-tab]");
+    if (b) showTab(b.dataset.tab);
+  });
+  document.getElementById("tabbar").addEventListener("keydown", function (ev) {
+    if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+    var bs = [].slice.call(this.querySelectorAll("button"));
+    var i = bs.indexOf(document.activeElement);
+    if (i < 0) return;
+    ev.preventDefault();
+    var next = bs[(i + (ev.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length];
+    next.focus();
+    showTab(next.dataset.tab);
+  });
+
+  try {
+    var savedTab = localStorage.getItem("elan-inv-tab");
+    if (savedTab && document.getElementById("panel-" + savedTab)) showTab(savedTab);
+  } catch (e) {}
+
   /* ---------- theme ---------- */
   var btn = document.getElementById("themeBtn");
   function currentTheme() {
@@ -1269,7 +1347,8 @@
     var next = currentTheme() === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     try { localStorage.setItem("elan-inv-theme", next); } catch (e) {}
-    drawTrend(); drawCover();
+    if (!document.getElementById("panel-rate").hidden) drawTrend();
+    if (!document.getElementById("panel-sizes").hidden) drawCover();
   });
   try {
     var saved = localStorage.getItem("elan-inv-theme");
@@ -1288,7 +1367,10 @@
   var redrawTimer;
   window.addEventListener("resize", function () {
     clearTimeout(redrawTimer);
-    redrawTimer = setTimeout(function () { drawTrend(); drawCover(); }, 150);
+    redrawTimer = setTimeout(function () {
+      if (!document.getElementById("panel-rate").hidden) drawTrend();
+      if (!document.getElementById("panel-sizes").hidden) drawCover();
+    }, 150);
   });
 })();
 </script>
