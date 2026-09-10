@@ -1,0 +1,11 @@
+# Build outputs of the inventory dashboard pipeline.
+#
+# inventory_data.json and inventory.html ARE committed — they are the snapshot
+# the dashboard serves, and the sibling performance dashboard commits its
+# data.json the same way. These two are regenerated on every refresh and would
+# add roughly a megabyte to history per day for nothing:
+#
+#   raw/                     raw Shopify pulls; inputs to build_inventory_data.py
+#   inventory_artifact.html  derived from inventory.html by build_artifact.py
+dashboard/raw/
+dashboard/inventory_artifact.html

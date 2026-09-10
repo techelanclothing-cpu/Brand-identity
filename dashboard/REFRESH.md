@@ -73,8 +73,12 @@ print("OK", t["units_in_stock"], "units,", t["rr7"], "units/day (7d)")
 EOF
 ```
 
-Then commit `inventory.html`, `inventory_data.json` and `raw/` to the working
-branch and push. Do not open a pull request.
+Then commit `inventory.html` and `inventory_data.json` to the working branch and
+push. Do not open a pull request.
+
+`raw/` and `inventory_artifact.html` are gitignored build outputs — both are
+regenerated on every refresh, and committing them would add about a megabyte to
+history per day. `inventory_data.json` is the committed source of truth.
 
 ## Sanity checks on the numbers
 
