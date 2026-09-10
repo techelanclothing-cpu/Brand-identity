@@ -100,6 +100,7 @@ on hand** and **how fast it is selling**:
 - Days of cover (stock ÷ run rate) at catalogue, size and product level
 - Units-sold-per-day trend over 30 days, against the 7-day average
 - Stock mix vs. demand mix by size — which sizes are over- or under-weighted
+- **Top 10 and bottom 10 sellers**, rankable over the 1-, 3- or 7-day window
 - A reorder watchlist of selling products with under 14 days of cover
 - Every product with its **per-size stock**, searchable, filterable and sortable
 
@@ -150,6 +151,14 @@ yesterday; `build_inventory_data.py` reads the same variable to set the windows.
 - **Stock mix vs. demand mix** — each size's share of total units in stock
   against its share of units sold in the last 7 days. A size whose stock share
   runs well ahead of its demand share is overweight.
+- **Top 10 sellers** — products ranked by units sold in the selected window
+  (1, 3 or 7 days), most first, ties broken by stock on hand.
+- **Bottom 10 sellers** — only products that **still hold stock**: a sold-out
+  product is gone, not dead stock. Most of the catalogue sells nothing in a given
+  week (515 of the 606 stocked products, over the 7-day window), so a raw "bottom
+  10" would be an arbitrary slice of a 515-way tie at zero. Ties are therefore
+  broken by **stock value**, surfacing the slow movers that tie up the most
+  capital. A negative figure means returns outnumbered sales in that window.
 
 ### A note on the 1000-row cap
 

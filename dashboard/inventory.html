@@ -149,7 +149,7 @@
   .rate .value span.unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; letter-spacing: 0; }
   .rate .sub { font-size: 11.5px; color: var(--text-secondary); margin-top: 7px; line-height: 1.45; }
 
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chart-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
   @media (max-width: 860px) { .chart-grid { grid-template-columns: 1fr; } }
   .chart-title { font-size: 13.5px; font-weight: 700; margin: 0 0 2px; }
   .chart-note { font-size: 11.5px; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.45; }
@@ -227,6 +227,25 @@
   .legend .item { display: inline-flex; align-items: center; gap: 6px; }
   .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 
+  .seller-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  .seller-card { min-width: 0; }
+  #topTable td:nth-child(2), #botTable td:nth-child(2) { white-space: normal; min-width: 150px; }
+  #topTable td:nth-child(2), #botTable td:nth-child(2),
+  #topTable th:nth-child(2), #botTable th:nth-child(2) { text-align: left; }
+  @media (max-width: 860px) { .seller-grid { grid-template-columns: 1fr; } }
+  .seller-card h3 { font-size: 13.5px; font-weight: 700; margin: 0 0 2px; }
+  .seller-card p.chart-note { margin-bottom: 10px; }
+  .rank { color: var(--text-muted); font-weight: 700; font-size: 11.5px; width: 18px; }
+  .mini { display: block; height: 5px; border-radius: 3px; background: var(--series-1); margin-top: 5px; min-width: 2px; }
+  .mini-track { display: block; height: 5px; border-radius: 3px; background: var(--chip); margin-top: 5px; }
+  .dead-note {
+    margin-top: 12px; padding: 11px 13px; border-radius: 10px;
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--warning) 34%, transparent);
+    font-size: 12px; color: var(--text-secondary); line-height: 1.55;
+  }
+  .dead-note b { color: var(--text-primary); }
+
   .empty { padding: 26px 10px; text-align: center; color: var(--text-muted); font-size: 13px; }
   .more-note { font-size: 11.5px; color: var(--text-muted); padding: 11px 4px 0; }
 
@@ -283,6 +302,45 @@
         <span class="item"><span class="swatch" style="background:var(--series-2)"></span> Share of stock</span>
         <span class="item"><span class="swatch" style="background:var(--series-1)"></span> Share sold, last 7 days</span>
       </div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Top and bottom sellers</h2>
+    <p id="sellerIntro"></p>
+  </div>
+  <div class="controls-row">
+    <div class="seg" id="sellerSeg" role="group" aria-label="Ranking window">
+      <button type="button" data-win="d1" aria-pressed="false">Last 1 day</button>
+      <button type="button" data-win="d3" aria-pressed="false">Last 3 days</button>
+      <button type="button" data-win="d7" aria-pressed="true">Last 7 days</button>
+    </div>
+  </div>
+  <div class="seller-grid">
+    <div class="card seller-card">
+      <h3>Top 10 sellers</h3>
+      <p class="chart-note" id="topNote"></p>
+      <div class="table-scroll">
+        <table id="topTable">
+          <thead>
+            <tr><th>#</th><th>Product</th><th>Sold</th><th>Rate</th><th>In stock</th><th>Cover</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card seller-card">
+      <h3>Bottom 10 sellers</h3>
+      <p class="chart-note" id="botNote"></p>
+      <div class="table-scroll">
+        <table id="botTable">
+          <thead>
+            <tr><th>#</th><th>Product</th><th>Sold</th><th>In stock</th><th>Sizes</th><th>Stock value</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="dead-note" id="deadNote"></div>
     </div>
   </div>
 
@@ -666,6 +724,85 @@
     wrap.appendChild(svg);
   }
 
+  /* ---------- top / bottom sellers ---------- */
+  var sellerWin = "d7";
+  var WIN_DAYS = { d1: 1, d3: 3, d7: 7 };
+
+  function winLabel(w) {
+    return w === "d1" ? "the last complete day" : "the last " + WIN_DAYS[w] + " days";
+  }
+
+  function renderSellers() {
+    var w = sellerWin, days = WIN_DAYS[w];
+
+    /* Top: anything that actually moved, most units first. */
+    var top = DATA.products.filter(function (p) { return p[w] > 0; })
+      .sort(function (a, b) { return b[w] - a[w] || b.stock - a.stock; })
+      .slice(0, 10);
+
+    /* Bottom: only products still HOLDING stock — a sold-out product isn't dead
+       stock, it's just gone. Most of the catalogue ties at zero, so the tiebreak
+       is capital tied up: the slowest movers that cost the most to keep. */
+    var stocked = DATA.products.filter(function (p) { return p.stock > 0; });
+    var bottom = stocked.slice()
+      .sort(function (a, b) { return a[w] - b[w] || b.value - a.value; })
+      .slice(0, 10);
+
+    var dead = stocked.filter(function (p) { return p[w] <= 0; });
+    var deadValue = dead.reduce(function (a, p) { return a + p.value; }, 0);
+    var deadUnits = dead.reduce(function (a, p) { return a + p.stock; }, 0);
+
+    document.getElementById("sellerIntro").textContent =
+      "Ranked over " + winLabel(w) + ", by units sold net of returns. " +
+      dead.length + " of the " + n(stocked.length) + " products holding stock sold nothing in that window, " +
+      "so the bottom list breaks those ties by how much capital each one ties up.";
+
+    document.getElementById("topNote").textContent =
+      top.length ? "Units sold over " + winLabel(w) + ". Bars are relative to the top seller."
+                 : "Nothing sold in this window.";
+    document.getElementById("botNote").textContent =
+      "Slowest movers that still hold stock, worst first. Ties at zero are ordered by stock value.";
+
+    var maxUnits = top.length ? top[0][w] : 1;
+    var tb = document.querySelector("#topTable tbody");
+    tb.innerHTML = top.length ? top.map(function (p, i) {
+      var pct = Math.max(2, p[w] / maxUnits * 100);
+      return '<tr><td class="rank tabular">' + (i + 1) + "</td>" +
+        '<td><div class="prod-name">' + esc(p.title) + "</div>" +
+        '<span class="mini-track"><span class="mini" style="width:' + pct.toFixed(1) + '%"></span></span></td>' +
+        '<td class="tabular"><b>' + n(p[w]) + "</b></td>" +
+        '<td class="tabular">' + rate(p[w] / days) + "</td>" +
+        '<td class="tabular">' + n(p.stock) + "</td>" +
+        "<td>" + coverPill(p.cover) + "</td></tr>";
+    }).join("") : '<tr><td colspan="6" class="empty">Nothing sold in this window.</td></tr>';
+
+    var bb = document.querySelector("#botTable tbody");
+    bb.innerHTML = bottom.map(function (p, i) {
+      return '<tr><td class="rank tabular">' + (i + 1) + "</td>" +
+        '<td><div class="prod-name">' + esc(p.title) + "</div>" +
+        '<div class="prod-meta">' + esc(p.type) + (p.status !== "ACTIVE" ? " · " + esc(p.status.toLowerCase()) : "") + "</div></td>" +
+        '<td class="tabular">' + (p[w] < 0 ? '<b style="color:var(--status-ink-critical)">' + n(p[w]) + "</b>" : n(p[w])) + "</td>" +
+        '<td class="tabular">' + n(p.stock) + "</td>" +
+        '<td class="tabular">' + p.sizes_in_stock + "/" + p.sizes_total + "</td>" +
+        '<td class="tabular"><b>' + money(p.value) + "</b></td></tr>";
+    }).join("");
+
+    document.getElementById("deadNote").innerHTML =
+      "<b>" + money(deadValue) + "</b> of stock — <b>" + n(deadUnits) + " units</b> across <b>" +
+      n(dead.length) + " products</b> — sold nothing over " + winLabel(w) +
+      ". That is " + Math.round(deadValue / T.retail_value * 100) + "% of total stock value sitting still.";
+  }
+
+  document.getElementById("sellerSeg").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-win]");
+    if (!b) return;
+    sellerWin = b.dataset.win;
+    [].forEach.call(this.querySelectorAll("button"), function (x) {
+      x.setAttribute("aria-pressed", String(x === b));
+    });
+    renderSellers();
+  });
+
   /* ---------- size table ---------- */
   function fillSizeTable() {
     var tb = document.querySelector("#sizeTable tbody");
@@ -835,6 +972,7 @@
     "<b>Run rate</b> is units sold in the window ÷ days in the window. Windows end on " + esc(META.run_rate_end) + ", the last complete day; today is excluded so a part-day does not drag the rate down.",
     "<b>Days of cover</b> is units in stock ÷ the 7-day daily run rate. It answers “at the current pace, how long until this runs out”. Items with no sales in the last 7 days have no meaningful rate and show “—”.",
     "<b>Stock value</b> is units in stock × current retail price, so it is the sell-through value of the stock, not its cost.",
+    "<b>Bottom 10 sellers</b> counts only products that still hold stock — a product that has sold out is gone, not dead stock. Most of the catalogue sells nothing in any given week, so ties at zero are broken by stock value, putting the most expensive standing stock first. A negative figure means returns outnumbered sales in that window.",
     "Every product in this catalogue uses a single <b>Size</b> option, so each variant is exactly one size.",
     "1 Sept 2026 shows 34 orders but 0 net units — returns that day cancelled out the units sold. The figure is Shopify's, carried through unchanged."
   ].map(function (t) { return "<li>" + t + "</li>"; }).join("");
@@ -860,6 +998,7 @@
   drawTrend();
   drawCover();
   fillSizeTable();
+  renderSellers();
   fillReorder();
   renderProducts();
 
