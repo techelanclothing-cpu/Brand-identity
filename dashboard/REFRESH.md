@@ -82,3 +82,25 @@ branch and push. Do not open a pull request.
 - Units are **net of returns**, so a day can legitimately be zero or negative.
 - If the 7-day run rate moves more than ~3x overnight, suspect the pull before
   believing the number.
+
+## The daily schedule
+
+A Routine, **"Elan inventory dashboard — daily refresh"**, runs this at
+**01:30 UTC / 07:00 IST** every day. It is bound to a persistent Claude session
+rather than firing a fresh one, because a fresh session gets no connector
+(`mcp__Shopify__*`) tools and Path B would have nothing to call. The sibling
+performance-dashboard routine (00:30 UTC) is set up the same way. The two are
+staggered an hour apart and touch different files:
+
+| Routine | Time | Touches |
+|---|---|---|
+| Refresh Elan performance dashboard | 00:30 UTC / 06:00 IST | `index.html`, `data.json` |
+| Elan inventory dashboard — daily refresh | 01:30 UTC / 07:00 IST | `inventory.html`, `inventory_data.json`, `raw/` |
+
+**Making it robust:** set `SHOPIFY_STORE_DOMAIN` and `SHOPIFY_ACCESS_TOKEN` in
+the environment. Path A then needs no connector at all, so the refresh stops
+depending on a session staying alive and becomes a single command.
+
+The routine is told to stay quiet on a clean run, and to speak up only if the
+pull fails, the reconciliation fails, or a product has newly dropped under 7
+days of cover.
