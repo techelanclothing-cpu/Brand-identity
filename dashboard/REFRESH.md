@@ -27,10 +27,11 @@ each result into `dashboard/raw/` in the shapes below, then run the two build
 scripts exactly as in Path A.
 
 **`raw/products_raw.json`** — array of Product nodes. Paginate
-`mcp__Shopify__graphql_query` 100 at a time:
+`mcp__Shopify__graphql_query`; `first: 250` works and covers the catalogue in
+three calls:
 
 ```graphql
-query { products(first: 100, sortKey: ID, after: CURSOR) {
+query { products(first: 250, sortKey: ID, after: CURSOR) {
   pageInfo { hasNextPage endCursor }
   nodes { id title status productType totalInventory
           options { name }
@@ -67,6 +68,18 @@ query { shopifyqlQuery(query: "FROM sales SHOW net_items_sold GROUP BY product_v
    aliases (`a:`, `b:`) to push it over the size threshold so it lands on disk.
 
 ## Verifying before commit
+
+Cross-check the product and variant counts against `productsCount` and
+`productVariantsCount` in the same session. A short pull that silently stops
+early looks exactly like products having been deleted; the counts tell the two
+apart. A genuine change shows up in both.
+
+When comparing against the previous snapshot, do not write
+`prev.get("cover") or DEFAULT` in Python — a cover of `0.0` is falsy, so every
+already-out-of-stock product reads as newly critical. Test `is None`
+explicitly.
+
+
 
 ```bash
 cd dashboard && python3 - <<'EOF'
