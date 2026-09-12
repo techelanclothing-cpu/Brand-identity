@@ -101,6 +101,12 @@ history per day. `inventory_data.json` is the committed source of truth.
 
 - Run-rate windows end on the **last complete day** — never include today.
 - Units are **net of returns**, so a day can legitimately be zero or negative.
+  When a batch of returns is processed, a day can show many orders and almost no
+  net units (1 Sept: 34 orders, 0 units; 11 Sept: 85 orders, 66 sold against 60
+  returned, 6 net). That is real data, not a broken pull — confirm it by
+  splitting the day's variant rows into positive and negative before concluding
+  anything. The run-rate tiles call it out when returns exceed a quarter of
+  gross units in a window.
 - If the 7-day run rate moves more than ~3x overnight, suspect the pull before
   believing the number.
 

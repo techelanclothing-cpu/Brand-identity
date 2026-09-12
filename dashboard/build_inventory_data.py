@@ -141,6 +141,10 @@ def build(products, sales_rows, daily_totals, end_date):
         "d7": [(end - datetime.timedelta(days=i)).isoformat() for i in range(7)],
     }
 
+    # Gross sales and returns per window, kept apart from the net figure. A day
+    # when a batch of returns is processed can net out near zero while the shop
+    # sold normally, and a net-only run rate reads as a demand collapse.
+    flow = {k: {"gross": 0, "returns": 0} for k in ("d1", "d3", "d7")}
     # variant id -> units sold within each window
     sold = defaultdict(lambda: {"d1": 0, "d3": 0, "d7": 0})
     # variant id -> {day: units}, over the whole pulled window, for the curves
@@ -157,6 +161,7 @@ def build(products, sales_rows, daily_totals, end_date):
         for k, days in win.items():
             if day in days:
                 sold[vid][k] += qty
+                flow[k]["gross" if qty > 0 else "returns"] += qty
     curve_days = sorted(d for d in all_days if d <= end_date)
 
     def rate(units, days):
@@ -250,6 +255,8 @@ def build(products, sales_rows, daily_totals, end_date):
         "d1": total_d1, "d3": total_d3, "d7": total_d7,
         "rr1": rate(total_d1, 1), "rr3": rate(total_d3, 3), "rr7": rate(total_d7, 7),
         "cover": cover(total_stock, total_d7 / 7),
+        "gross": {k: flow[k]["gross"] for k in flow},
+        "returns": {k: -flow[k]["returns"] for k in flow},
     }
 
     curves = build_curves(products, series, curve_days) if curve_days else None
