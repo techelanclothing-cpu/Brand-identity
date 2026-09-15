@@ -135,7 +135,7 @@ days of cover.
 ## Republishing the shared link
 
 The dashboard is also published as an Artifact:
-**https://claude.ai/code/artifact/c5dd083e-74ff-4041-8e94-86b1a2596609**
+**https://claude.ai/artifact/RS7fpaz1YzJx3Z5pBmTMe8**
 
 After rebuilding, regenerate the publishable variant and update the artifact
 **in place**:
@@ -145,9 +145,16 @@ python3 build_artifact.py    # -> inventory_artifact.html
 ```
 
 Then publish with the Artifact tool passing
-`url: "https://claude.ai/code/artifact/c5dd083e-74ff-4041-8e94-86b1a2596609"`.
+`url: "https://claude.ai/artifact/RS7fpaz1YzJx3Z5pBmTMe8"`.
 **Never omit `url`** — publishing without it creates a second, separate artifact
 instead of updating this one, and the link you already shared goes stale.
+
+On 15 Sept 2026 the platform moved artifact URLs from the long
+`/code/artifact/<uuid>` form to a short `/artifact/<id>` one. Publishing with
+the old URL still updated the same artifact in place (the version counter
+carried on, and `action: "list"` showed no duplicate), but the result came back
+under the new address — which is the one recorded above. If this happens again,
+check `action: "list"` before assuming a second artifact was created.
 
 `build_artifact.py` exists because the repo file points at `../Gilroy-*.woff`
 and `../Elan - Wordmark - White.svg`. Those resolve inside the repo but 404 on
