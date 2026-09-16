@@ -172,11 +172,13 @@ def main():
             json.dump(payload, f)
         print(f"Wrote {path}")
 
-    # Cross-check: per-variant units must reconcile with the store-level totals.
+    # Cross-check: units must reconcile with the store-level totals. Shopify can
+    # emit a row with a null product_variant_id - an adjustment it cannot pin to
+    # a variant, usually against something since deleted. It counts toward the
+    # store total, so it has to count here too, or a complete pull looks short.
     by_day = {}
     for r in sales_rows:
-        if r.get("product_variant_id"):
-            by_day[r["day"][:10]] = by_day.get(r["day"][:10], 0) + int(r["net_items_sold"])
+        by_day[r["day"][:10]] = by_day.get(r["day"][:10], 0) + int(r["net_items_sold"])
     mismatch = [d for d in by_day if any(x["date"] == d and x["units"] != by_day[d] for x in daily)]
     if mismatch:
         print(f"WARNING: per-variant totals differ from store totals on {sorted(mismatch)} "

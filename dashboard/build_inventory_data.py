@@ -218,12 +218,18 @@ def build(products, sales_rows, daily_totals, end_date):
     # variant id -> {day: units}, over the whole pulled window, for the curves
     series = defaultdict(dict)
     all_days = set()
+    unattributed = 0
     for r in sales_rows:
         vid = r.get("product_variant_id")
         day = r["day"][:10]
         all_days.add(day)
         if not vid:
-            continue  # rows with a null variant id are unattributed adjustments
+            # Shopify could not pin this to a variant (usually one since
+            # deleted). It counts in the store total but cannot be attributed to
+            # any product, so it is tracked separately rather than dropped.
+            if day <= end_date:
+                unattributed += int(r["net_items_sold"])
+            continue
         qty = int(r["net_items_sold"])
         series[vid][day] = series[vid].get(day, 0) + qty
         for k, days in win.items():
@@ -339,6 +345,7 @@ def build(products, sales_rows, daily_totals, end_date):
             "generated_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
             "inventory_as_of": datetime.date.today().isoformat(),
             "run_rate_end": end_date,
+            "unattributed_units": unattributed,
             "windows": {"d1": win["d1"][-1], "d3": win["d3"][-1], "d7": win["d7"][-1]},
         },
         "totals": totals,
@@ -367,6 +374,9 @@ def main():
     print(f"  {t['products']} products / {t['variants']} size variants")
     print(f"  {t['units_in_stock']} units in stock, {t['variants_in_stock']} sizes in stock, {t['variants_oos']} out of stock")
     print(f"  run rate: {t['rr1']}/day (1d), {t['rr3']}/day (3d), {t['rr7']}/day (7d)")
+    if data["meta"]["unattributed_units"]:
+        print(f"  unattributed units in window: {data['meta']['unattributed_units']} "
+              "(counted in store totals, not attributable to any product)")
     print(f"  days of cover at 7d rate: {t['cover']}")
     h = data.get("heroes")
     if h:

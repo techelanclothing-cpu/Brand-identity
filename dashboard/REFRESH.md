@@ -60,8 +60,16 @@ query { shopifyqlQuery(query: "FROM sales SHOW net_items_sold GROUP BY product_v
    10-day chunk lands near 600 rows; three chunks fit in one call as separate
    aliases, each with its own row budget.
 2. **Always reconcile before building.** Sum `net_items_sold` per day across
-   variants and check it equals the store-level `daily_totals` for that day. If
-   a day disagrees, the pull is incomplete — do not publish it.
+   **all rows** and check it equals the store-level `daily_totals` for that day.
+   If a day disagrees, the pull is incomplete — do not publish it.
+
+   Count rows whose `product_variant_id` is **null**. Shopify emits these for an
+   adjustment it cannot pin to a variant, usually one since deleted. They are in
+   the store total, so excluding them makes a complete pull look one unit short
+   — which is exactly what happened on 15 Sept 2026 (named 85, unattributed −1,
+   store 84). They are still excluded from per-product attribution, because they
+   cannot be attributed; the residual is reported as `meta.unattributed_units`
+   so it is visible rather than silently dropped.
 3. **Large MCP results are written to a file instead of being returned inline.**
    That is the good case: read them with `jq`. When a result comes back inline
    and is too big to handle comfortably, re-issue the query with duplicate
