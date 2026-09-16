@@ -133,44 +133,49 @@ def build_curves(products, sold, days):
     }
 
 
-# A product earns a place on the hero page at this many units over the window.
-HERO_WINDOW_DAYS = 60
-HERO_MIN_UNITS = 5
+# Heroes ships the daily series rather than one precomputed window, so the page
+# can rank over any date range the user picks without another Shopify pull.
+HERO_DEFAULT_DAYS = 60
 
 
-def build_heroes(products, series, end_date):
-    """Best-selling products over the hero window, as a size-by-size stock grid.
+def build_heroes(products, series, days):
+    """Per-size stock and daily sales for every product that sold in the window.
 
     Sizes are split by system - numeric waists and alpha shirt sizes - because a
     single grid spanning both is mostly empty cells. Each row carries one entry
-    per size in its group, null where the product does not offer that size at
-    all, so the columns line up down the table.
-    """
-    end = datetime.date.fromisoformat(end_date)
-    start = end - datetime.timedelta(days=HERO_WINDOW_DAYS - 1)
-    window = {(start + datetime.timedelta(days=i)).isoformat() for i in range(HERO_WINDOW_DAYS)}
+    per size in its group, null where the product does not offer that size, so
+    the columns line up down the table.
 
+    Sales are emitted as a sparse day-index -> units map per size, keyed against
+    the shared `days` list. The page sums whatever slice of it the user selects,
+    so ranking and days-left follow the chosen range with no server round trip.
+    """
+    index = {d: i for i, d in enumerate(days)}
     vp, pp = "gid://shopify/ProductVariant/", "gid://shopify/Product/"
-    by_product = defaultdict(lambda: {"sold": 0, "stock": 0, "value": 0.0, "sizes": {}})
+
+    by_product = {}
     for p in products:
         pid = p["id"].replace(pp, "")
-        e = by_product[pid]
-        e["title"], e["status"] = p["title"], p["status"]
+        sizes, sold_any = {}, False
         for v in p["variants"]["nodes"]:
             vid = v["id"].replace(vp, "")
-            qty = v.get("inventoryQuantity") or 0
-            sold = sum(q for d, q in series.get(vid, {}).items() if d in window and q > 0)
-            e["sold"] += sold
-            e["stock"] += max(qty, 0)
-            e["value"] += max(qty, 0) * float(v.get("price") or 0)
-            e["sizes"][v["title"]] = {"qty": qty, "sold": sold}
+            daily = {}
+            for d, q in series.get(vid, {}).items():
+                if q and d in index:
+                    daily[str(index[d])] = q
+                    if q > 0:
+                        sold_any = True
+            sizes[v["title"]] = {
+                "q": v.get("inventoryQuantity") or 0,
+                "p": float(v.get("price") or 0),
+                "d": daily,
+            }
+        if sold_any and sizes:
+            by_product[pid] = {"title": p["title"], "status": p["status"], "sizes": sizes}
 
     groups = {}
     for pid, e in by_product.items():
-        if e["sold"] < HERO_MIN_UNITS or not e["sizes"]:
-            continue
-        key = size_system(next(iter(e["sizes"])))
-        groups.setdefault(key, []).append((pid, e))
+        groups.setdefault(size_system(next(iter(e["sizes"]))), []).append((pid, e))
 
     out = []
     for key, label in (("numeric", "Trousers"), ("alpha", "Shirts")):
@@ -178,24 +183,20 @@ def build_heroes(products, series, end_date):
         if not rows:
             continue
         sizes = sorted({s for _, e in rows for s in e["sizes"]}, key=size_sort_key)
-        rows.sort(key=lambda x: (-x[1]["sold"], x[1]["title"]))
+        rows.sort(key=lambda x: x[1]["title"])
         out.append({
             "key": key, "label": label, "sizes": sizes,
             "products": [{
                 "id": pid, "title": e["title"], "status": e["status"],
-                "sold": e["sold"], "stock": e["stock"], "value": round(e["value"], 2),
-                "rate": round(e["sold"] / HERO_WINDOW_DAYS, 3),
-                "cover": (round(e["stock"] / (e["sold"] / HERO_WINDOW_DAYS), 1)
-                          if e["sold"] > 0 else None),
-                # null where the product does not carry that size at all, which
-                # is a different fact from carrying it and having none left.
-                "cells": [(e["sizes"][s] if s in e["sizes"] else None) for s in sizes],
+                "value": round(sum(max(c["q"], 0) * c["p"] for c in e["sizes"].values()), 2),
+                "cells": [({"q": e["sizes"][s]["q"], "d": e["sizes"][s]["d"]}
+                           if s in e["sizes"] else None) for s in sizes],
             } for pid, e in rows],
         })
 
     return {
-        "window": {"from": start.isoformat(), "to": end.isoformat(), "days": HERO_WINDOW_DAYS},
-        "min_units": HERO_MIN_UNITS,
+        "days": days,
+        "default_days": HERO_DEFAULT_DAYS,
         "groups": out,
     }
 
@@ -327,7 +328,7 @@ def build(products, sales_rows, daily_totals, end_date):
     }
 
     curves = build_curves(products, series, curve_days) if curve_days else None
-    heroes = build_heroes(products, series, end_date)
+    heroes = build_heroes(products, series, curve_days) if curve_days else None
 
     return {
         "curves": curves,
@@ -370,7 +371,7 @@ def main():
     h = data.get("heroes")
     if h:
         print(f"  heroes: " + ", ".join(f"{g['label']} {len(g['products'])}" for g in h["groups"])
-              + f" over {h['window']['days']} days (>= {h['min_units']} units)")
+              + f", daily series over {len(h['days'])} days ({h['days'][0]} to {h['days'][-1]})")
     c = data.get("curves")
     if c:
         print(f"  size curves: {len(c['products'])} products over {c['window']['days']} days "

@@ -101,7 +101,7 @@ on hand** and **how fast it is selling**:
 - Units-sold-per-day trend over 30 days, against the 7-day average
 - Stock mix vs. demand mix by size — which sizes are over- or under-weighted
 - **Top 10 and bottom 10 sellers**, rankable over the 1-, 3- or 7-day window
-- **Hero products** — best sellers of the last 60 days as a size-by-size stock grid
+- **Hero products** — best sellers over any date range you pick, as a size-by-size stock grid
 - **Size curve and reorder calculator** — per-product size mix corrected for stock-outs
 - **Demand lost to stock-outs** — units each product likely never sold because a size was gone
 - A reorder watchlist of selling products with under 14 days of cover
@@ -158,8 +158,12 @@ yesterday; `build_inventory_data.py` reads the same variable to set the windows.
   runs well ahead of its demand share is overweight.
 - **Top 10 sellers** — products ranked by units sold in the selected window
   (1, 3 or 7 days), most first, ties broken by stock on hand.
-- **Hero products** — products that sold at least 5 units over the last 60
-  days, ranked by units, with remaining stock in every size as its own column.
+- **Hero products** — products ranked by units sold over a **chosen date
+  range** (7/14/30/60/90-day presets, or any from/to inside the pulled window),
+  with remaining stock in every size as its own column. The daily per-size
+  series ships inside the page, so changing the range recomputes the ranking,
+  days-left and low-stock shading instantly with no refetch; it costs about
+  66 KB and covers the same 90 days as the sales pull.
   Split into trousers (numeric waists) and shirts (alpha sizes): one grid across
   both size systems would be mostly empty cells. A cell is units left in that
   size; a dot means the product does not carry that size at all, which is a
