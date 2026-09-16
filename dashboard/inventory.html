@@ -1249,7 +1249,7 @@
     "<b>Run rate</b> is units sold in the window ÷ days in the window. Windows end on " + esc(META.run_rate_end) + ", the last complete day; today is excluded so a part-day does not drag the rate down.",
     "<b>Days of cover</b> is units in stock ÷ the 7-day daily run rate. It answers “at the current pace, how long until this runs out”. Items with no sales in the last 7 days have no meaningful rate and show “—”.",
     "<b>Stock value</b> is units in stock × current retail price, so it is the sell-through value of the stock, not its cost.",
-    "<b>Hero products</b> rank by units sold over whatever date range you pick, and every figure on that page — the ranking, days left, and which sizes count as running low — follows that range. The daily per-size series is embedded in the page, so changing the range recomputes instantly and needs no refetch; it covers " + (DATA.heroes ? DATA.heroes.days.length : 90) + " days, which is as far back as the sales pull goes. Trousers and shirts are split because the two use different size systems and one grid across both would be mostly empty. Each cell is units left in that size; a dot means the product does not carry that size at all, which is a different fact from carrying it and having sold out.",
+    "<b>Hero products</b> rank by units sold over whatever date range you pick, and every figure on that page — the ranking, days left, and which sizes count as running low — follows that range. The daily per-size series is embedded in the page, so changing the range recomputes instantly and needs no refetch; it covers " + (DATA.heroes ? DATA.heroes.days.length : 90) + " days, which is as far back as the sales pull goes. Trousers and shirts are split because the two use different size systems and one grid across both would be mostly empty. Each cell is units left in that size; a dot means the product does not carry that size at all, which is a different fact from carrying it and having sold out. Stock is a single live reading and is identical whichever range you pick — what moves with the range is the sold column, the per-day rate, days left, and the row order. The amber \"running low\" shading is relative to how fast that size sells in the chosen range, so a cell can change shade while its number stays put.",
     "<b>Reorder mix</b> is each product's size demand over " + (DATA.curves ? DATA.curves.window.days : 90) + " days, corrected for stock-outs: a size that sold out stops selling, so demand is measured per day the size was actually in stock rather than per calendar day. Stock levels are walked backwards from today to work out those days, which cannot see restocks and so overstates availability — meaning the correction is conservative and never inflates a size beyond what the data supports. Thin per-product curves are blended toward the average curve for that size system, weighted by how many units the product actually sold.",
     "<b>Bottom 10 sellers</b> counts only products that still hold stock — a product that has sold out is gone, not dead stock. Most of the catalogue sells nothing in any given week, so ties at zero are broken by stock value, putting the most expensive standing stock first. A negative figure means returns outnumbered sales in that window.",
     "Every product in this catalogue uses a single <b>Size</b> option, so each variant is exactly one size.",
@@ -1432,14 +1432,16 @@
     }).filter(function (r) { return r.sold > 0; })
       .sort(function (a, b) { return b.sold - a.sold || a.p.title.localeCompare(b.p.title); });
 
-    document.getElementById("heroIntro").textContent =
-      "Best sellers from " + dayLabel(d[heroFrom]) + " to " + dayLabel(d[heroTo]) +
-      " (" + span + " day" + (span === 1 ? "" : "s") + "), with what is left in every size. " +
+    document.getElementById("heroIntro").innerHTML =
+      "Best sellers from <b>" + dayLabel(d[heroFrom]) + " to " + dayLabel(d[heroTo]) +
+      "</b> (" + span + " day" + (span === 1 ? "" : "s") + "), ranked by units sold. " +
       rows.length + " " + g.label.toLowerCase() + " sold in this range. " +
+      "Stock counts are live as of " + dayLabel(META.inventory_as_of) +
+      " and do not change with the range — only the sold column, the rate and days left do. " +
       "A red cell is a size that has sold out on a product that is still selling.";
 
     document.getElementById("heroHead").innerHTML =
-      "<th>Product</th><th>Sold</th><th>Left</th><th>Days left</th>" +
+      "<th>Product</th><th>Sold in range</th><th>In stock now</th><th>Days left</th>" +
       g.sizes.map(function (s) { return '<th class="sz">' + esc(s) + "</th>"; }).join("");
 
     var tbody = document.querySelector("#heroTable tbody");
