@@ -109,7 +109,11 @@ def parse_adspend(raw):
     out = {}
     for e in entities:
         day = e["date_start"]
-        out[day] = parse_money_string(e["amount_spent"])
+        amount = e["amount_spent"]
+        if isinstance(amount, dict):
+            out[day] = float(amount["value"])
+        else:
+            out[day] = parse_money_string(amount)
     return out
 
 
