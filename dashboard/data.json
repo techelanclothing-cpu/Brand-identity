@@ -2,10 +2,10 @@
   "meta": {
     "shop": "Elan Clothing (elanclothing.in)",
     "currency": "INR",
-    "generated_at": "2026-10-09T00:52:33Z",
+    "generated_at": "2026-10-10T00:52:24Z",
     "range": {
       "from": "2026-06-25",
-      "to": "2026-10-09"
+      "to": "2026-10-10"
     },
     "notes": [
       "Gross Sales, Discounts, AOV and Sessions are sourced from Shopify's ShopifyQL 'sales' and 'sessions' datasets. Conversion% is computed as Orders / Sessions.",
@@ -876,10 +876,10 @@
       "ad_spend": 13801.29,
       "roas": 4.36,
       "discount_pct": 4.65,
-      "cod_orders": 8,
-      "prepaid_orders": 24,
-      "cod_order_pct": 25.0,
-      "prepaid_order_pct": 75.0
+      "cod_orders": 0,
+      "prepaid_orders": 0,
+      "cod_order_pct": 0,
+      "prepaid_order_pct": 0
     },
     {
       "date": "2026-08-12",
@@ -1705,9 +1705,9 @@
       "roas": 5.62,
       "discount_pct": 4.45,
       "cod_orders": 40,
-      "prepaid_orders": 64,
-      "cod_order_pct": 38.5,
-      "prepaid_order_pct": 61.5
+      "prepaid_orders": 63,
+      "cod_order_pct": 38.8,
+      "prepaid_order_pct": 61.2
     },
     {
       "date": "2026-09-27",
@@ -1741,9 +1741,9 @@
       "roas": 6.24,
       "discount_pct": 4.26,
       "cod_orders": 30,
-      "prepaid_orders": 36,
-      "cod_order_pct": 45.5,
-      "prepaid_order_pct": 54.5
+      "prepaid_orders": 35,
+      "cod_order_pct": 46.2,
+      "prepaid_order_pct": 53.8
     },
     {
       "date": "2026-09-29",
@@ -1759,9 +1759,9 @@
       "roas": 4.18,
       "discount_pct": 3.98,
       "cod_orders": 12,
-      "prepaid_orders": 26,
-      "cod_order_pct": 31.6,
-      "prepaid_order_pct": 68.4
+      "prepaid_orders": 25,
+      "cod_order_pct": 32.4,
+      "prepaid_order_pct": 67.6
     },
     {
       "date": "2026-09-30",
@@ -1794,10 +1794,10 @@
       "ad_spend": 10419.52,
       "roas": 6.27,
       "discount_pct": 3.91,
-      "cod_orders": 22,
+      "cod_orders": 21,
       "prepaid_orders": 35,
-      "cod_order_pct": 38.6,
-      "prepaid_order_pct": 61.4
+      "cod_order_pct": 37.5,
+      "prepaid_order_pct": 62.5
     },
     {
       "date": "2026-10-02",
@@ -1812,10 +1812,10 @@
       "ad_spend": 16303.21,
       "roas": 7.98,
       "discount_pct": 3.59,
-      "cod_orders": 34,
-      "prepaid_orders": 89,
-      "cod_order_pct": 27.6,
-      "prepaid_order_pct": 72.4
+      "cod_orders": 33,
+      "prepaid_orders": 88,
+      "cod_order_pct": 27.3,
+      "prepaid_order_pct": 72.7
     },
     {
       "date": "2026-10-03",
@@ -1830,10 +1830,10 @@
       "ad_spend": 17829.85,
       "roas": 7.68,
       "discount_pct": 4.01,
-      "cod_orders": 31,
-      "prepaid_orders": 63,
-      "cod_order_pct": 33.0,
-      "prepaid_order_pct": 67.0
+      "cod_orders": 30,
+      "prepaid_orders": 62,
+      "cod_order_pct": 32.6,
+      "prepaid_order_pct": 67.4
     },
     {
       "date": "2026-10-04",
@@ -1866,10 +1866,10 @@
       "ad_spend": 18154.28,
       "roas": 6.68,
       "discount_pct": 3.34,
-      "cod_orders": 31,
+      "cod_orders": 30,
       "prepaid_orders": 61,
-      "cod_order_pct": 33.7,
-      "prepaid_order_pct": 66.3
+      "cod_order_pct": 33.0,
+      "prepaid_order_pct": 67.0
     },
     {
       "date": "2026-10-06",
@@ -1899,7 +1899,7 @@
       "sessions": 4371,
       "conversion_rate": 1.739,
       "aov": 1355.48,
-      "ad_spend": 17805.06,
+      "ad_spend": 17805.25,
       "roas": 5.79,
       "discount_pct": 4.45,
       "cod_orders": 25,
@@ -1917,8 +1917,8 @@
       "sessions": 4493,
       "conversion_rate": 1.892,
       "aov": 1427.38,
-      "ad_spend": 18234.14,
-      "roas": 6.65,
+      "ad_spend": 18262.58,
+      "roas": 6.64,
       "discount_pct": 3.57,
       "cod_orders": 33,
       "prepaid_orders": 46,
@@ -1927,21 +1927,39 @@
     },
     {
       "date": "2026-10-09",
-      "orders": 10,
-      "gross_sales": 12942.8,
-      "discounts": 266.44,
-      "revenue": 12676.36,
-      "quantity": 10,
-      "sessions": 624,
-      "conversion_rate": 1.603,
-      "aov": 1267.64,
-      "ad_spend": 1712.73,
-      "roas": 7.4,
-      "discount_pct": 2.06,
-      "cod_orders": 1,
+      "orders": 88,
+      "gross_sales": 113570.98,
+      "discounts": 3215.81,
+      "revenue": 110355.17,
+      "quantity": 98,
+      "sessions": 4344,
+      "conversion_rate": 2.026,
+      "aov": 1254.04,
+      "ad_spend": 16605.34,
+      "roas": 6.65,
+      "discount_pct": 2.83,
+      "cod_orders": 39,
+      "prepaid_orders": 85,
+      "cod_order_pct": 31.5,
+      "prepaid_order_pct": 68.5
+    },
+    {
+      "date": "2026-10-10",
+      "orders": 52,
+      "gross_sales": 17986.59,
+      "discounts": 556.65,
+      "revenue": 17429.94,
+      "quantity": 54,
+      "sessions": 639,
+      "conversion_rate": 8.138,
+      "aov": 335.19,
+      "ad_spend": 2008.14,
+      "roas": 8.68,
+      "discount_pct": 3.09,
+      "cod_orders": 0,
       "prepaid_orders": 0,
-      "cod_order_pct": 100.0,
-      "prepaid_order_pct": 0.0
+      "cod_order_pct": 0,
+      "prepaid_order_pct": 0
     }
   ],
   "weekly": [
@@ -2097,10 +2115,10 @@
       "ad_spend": 102772.68,
       "roas": 4.93,
       "discount_pct": 4.61,
-      "cod_orders": 62,
-      "prepaid_orders": 200,
-      "cod_order_pct": 23.7,
-      "prepaid_order_pct": 76.3,
+      "cod_orders": 54,
+      "prepaid_orders": 176,
+      "cod_order_pct": 23.5,
+      "prepaid_order_pct": 76.5,
       "period": "2026-W33",
       "label": "2026-08-10 to 2026-08-16",
       "days_in_period": 7
@@ -2218,9 +2236,9 @@
       "roas": 5.55,
       "discount_pct": 4.44,
       "cod_orders": 194,
-      "prepaid_orders": 354,
-      "cod_order_pct": 35.4,
-      "prepaid_order_pct": 64.6,
+      "prepaid_orders": 353,
+      "cod_order_pct": 35.5,
+      "prepaid_order_pct": 64.5,
       "period": "2026-W39",
       "label": "2026-09-21 to 2026-09-27",
       "days_in_period": 7
@@ -2237,33 +2255,33 @@
       "ad_spend": 118665.38,
       "roas": 6.24,
       "discount_pct": 3.83,
-      "cod_orders": 194,
-      "prepaid_orders": 376,
-      "cod_order_pct": 34.0,
-      "prepaid_order_pct": 66.0,
+      "cod_orders": 191,
+      "prepaid_orders": 372,
+      "cod_order_pct": 33.9,
+      "prepaid_order_pct": 66.1,
       "period": "2026-W40",
       "label": "2026-09-28 to 2026-10-04",
       "days_in_period": 7
     },
     {
-      "orders": 364,
-      "gross_sales": 491316.2,
-      "discounts": 16842.85,
-      "revenue": 474473.35,
-      "quantity": 363,
-      "sessions": 19344,
-      "conversion_rate": 1.882,
-      "aov": 1349.77,
-      "ad_spend": 75309.41,
-      "roas": 6.3,
-      "discount_pct": 3.43,
-      "cod_orders": 124,
-      "prepaid_orders": 209,
-      "cod_order_pct": 37.2,
-      "prepaid_order_pct": 62.8,
+      "orders": 494,
+      "gross_sales": 609930.97,
+      "discounts": 20348.87,
+      "revenue": 589582.1,
+      "quantity": 505,
+      "sessions": 23703,
+      "conversion_rate": 2.084,
+      "aov": 1234.68,
+      "ad_spend": 92238.79,
+      "roas": 6.39,
+      "discount_pct": 3.34,
+      "cod_orders": 161,
+      "prepaid_orders": 294,
+      "cod_order_pct": 35.4,
+      "prepaid_order_pct": 64.6,
       "period": "2026-W41",
-      "label": "2026-10-05 to 2026-10-09",
-      "days_in_period": 5
+      "label": "2026-10-05 to 2026-10-10",
+      "days_in_period": 6
     }
   ],
   "monthly": [
@@ -2319,10 +2337,10 @@
       "ad_spend": 425326.43,
       "roas": 4.98,
       "discount_pct": 4.26,
-      "cod_orders": 197,
-      "prepaid_orders": 641,
-      "cod_order_pct": 23.5,
-      "prepaid_order_pct": 76.5,
+      "cod_orders": 189,
+      "prepaid_orders": 617,
+      "cod_order_pct": 23.4,
+      "prepaid_order_pct": 76.6,
       "period": "2026-08",
       "label": "2026-08",
       "days_in_period": 31
@@ -2340,32 +2358,32 @@
       "roas": 5.95,
       "discount_pct": 4.52,
       "cod_orders": 565,
-      "prepaid_orders": 1232,
-      "cod_order_pct": 31.4,
-      "prepaid_order_pct": 68.6,
+      "prepaid_orders": 1229,
+      "cod_order_pct": 31.5,
+      "prepaid_order_pct": 68.5,
       "period": "2026-09",
       "label": "2026-09",
       "days_in_period": 30
     },
     {
-      "orders": 762,
-      "gross_sales": 990932.23,
-      "discounts": 35514.88,
-      "revenue": 955417.35,
-      "quantity": 774,
-      "sessions": 38550,
-      "conversion_rate": 1.977,
-      "aov": 1300.44,
-      "ad_spend": 149540.53,
-      "roas": 6.39,
-      "discount_pct": 3.58,
-      "cod_orders": 255,
-      "prepaid_orders": 470,
-      "cod_order_pct": 35.2,
-      "prepaid_order_pct": 64.8,
+      "orders": 892,
+      "gross_sales": 1109547.0,
+      "discounts": 39020.9,
+      "revenue": 1070526.1,
+      "quantity": 916,
+      "sessions": 42909,
+      "conversion_rate": 2.079,
+      "aov": 1243.89,
+      "ad_spend": 166469.91,
+      "roas": 6.43,
+      "discount_pct": 3.52,
+      "cod_orders": 289,
+      "prepaid_orders": 553,
+      "cod_order_pct": 34.3,
+      "prepaid_order_pct": 65.7,
       "period": "2026-10",
       "label": "2026-10",
-      "days_in_period": 9
+      "days_in_period": 10
     }
   ]
 }
