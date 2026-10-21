@@ -195,6 +195,17 @@
   tbody tr:hover { background: var(--surface-2); }
   .table-scroll { overflow-x: auto; }
 
+  /* The two wear tables sit in half-width cards, so fix the numeric columns
+     and let the product name wrap rather than pushing the cover column out of
+     the card. */
+  #topwearTable, #bottomwearTable { table-layout: fixed; min-width: 430px; }
+  #topwearTable td:first-child, #bottomwearTable td:first-child,
+  #topwearTable th:first-child, #bottomwearTable th:first-child { white-space: normal; overflow-wrap: break-word; }
+  #topwearTable th:nth-child(2), #bottomwearTable th:nth-child(2) { width: 76px; }
+  #topwearTable th:nth-child(3), #bottomwearTable th:nth-child(3) { width: 72px; }
+  #topwearTable th:nth-child(4), #bottomwearTable th:nth-child(4) { width: 118px; }
+  #topwearTable .prod-meta, #bottomwearTable .prod-meta { white-space: normal; }
+
   .pill {
     display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
     padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
@@ -340,6 +351,7 @@
     <button type="button" role="tab" data-tab="heroes" id="tab-heroes" aria-controls="panel-heroes" aria-selected="false">Heroes</button>
     <button type="button" role="tab" data-tab="sizes" id="tab-sizes" aria-controls="panel-sizes" aria-selected="false">Sizes</button>
     <button type="button" role="tab" data-tab="products" id="tab-products" aria-controls="panel-products" aria-selected="false">Products</button>
+    <button type="button" role="tab" data-tab="wear" id="tab-wear" aria-controls="panel-wear" aria-selected="false">Topwear / Bottomwear</button>
   </nav>
 
   <section class="panel" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
@@ -631,6 +643,61 @@
   </section>
 
 
+
+  <section class="panel" id="panel-wear" role="tabpanel" aria-labelledby="tab-wear" hidden>
+
+  <div class="section-head">
+    <h2>Stock by topwear and bottomwear</h2>
+    <p id="wearIntro"></p>
+  </div>
+
+  <div class="controls-row">
+    <input class="field" id="wearSearch" type="search" placeholder="Search product or size (e.g. linen, gurkha, 32)" aria-label="Search products">
+    <div class="seg" id="wearFilterSeg" role="group" aria-label="Filter products">
+      <button type="button" data-wfilter="instock" aria-pressed="true">Holding stock</button>
+      <button type="button" data-wfilter="all" aria-pressed="false">All</button>
+    </div>
+    <select class="field" id="wearSortSel" aria-label="Sort products">
+      <option value="stock">Sort: most stock</option>
+      <option value="value">Sort: highest stock value</option>
+      <option value="d7">Sort: best selling (7d)</option>
+      <option value="cover">Sort: least cover</option>
+      <option value="title">Sort: name A–Z</option>
+    </select>
+  </div>
+
+  <div class="seller-grid">
+    <div class="card seller-card">
+      <h3>Topwear</h3>
+      <p class="chart-note" id="topwearNote"></p>
+      <div class="table-scroll">
+        <table id="topwearTable">
+          <thead>
+            <tr><th>Product</th><th>In stock</th><th>Sold 7d</th><th>Days cover</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="more-note" id="topwearMore"></div>
+    </div>
+    <div class="card seller-card">
+      <h3>Bottomwear</h3>
+      <p class="chart-note" id="bottomwearNote"></p>
+      <div class="table-scroll">
+        <table id="bottomwearTable">
+          <thead>
+            <tr><th>Product</th><th>In stock</th><th>Sold 7d</th><th>Days cover</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="more-note" id="bottomwearMore"></div>
+    </div>
+  </div>
+
+  <div class="more-note" id="wearUnclassified"></div>
+  </section>
+
 </main>
 
 <script id="inventory-data" type="application/json">
@@ -672,6 +739,13 @@
     var text = c === null || c === undefined ? "—" : (c < 100 ? rate(c) : n(c)) + "d";
     return '<span class="pill ' + b.key + '">' + text + " · " + b.label + "</span>";
   }
+  function coverPillCompact(c) {
+    var b = coverBand(c);
+    var short = { critical: "Reorder", serious: "Low", warning: "Watch", good: "OK", none: "No sales" }[b.key];
+    var text = c === null || c === undefined ? "\u2014" : (c < 100 ? rate(c) : n(c)) + "d";
+    return '<span class="pill ' + b.key + '" style="white-space:nowrap">' + text + " \u00b7 " + short + "</span>";
+  }
+
   function coverText(c) {
     if (c === null || c === undefined) return "—";
     return c < 100 ? rate(c) : n(c);
@@ -1509,6 +1583,164 @@
     document.getElementById("heroTo").addEventListener("change", onDateChange);
     setRangeDays(Math.min(HEROES.default_days, HEROES.days.length));
   }
+
+  /* ---------- topwear / bottomwear ---------- */
+  /* Shopify's product type covers all but a handful of records; those fall
+     back to the title, which places every product that actually holds stock.
+     Anything still unplaced is named under the tables rather than dropped, so
+     the two columns always add up to the catalogue. */
+  var WEAR_TOP_TYPES = { "shirts": 1, "tshirts": 1, "t-shirts": 1, "hoodies": 1, "sweatshirts": 1, "coats & jackets": 1 };
+  var WEAR_BOTTOM_TYPES = { "trouser": 1, "trousers": 1, "jeans": 1, "shorts": 1, "pants": 1 };
+  var WEAR_TOP_WORDS = /(shirt|t-?shirt|\btee\b|hoodie|sweatshirt|jacket|coat|polo|kurta)/i;
+  var WEAR_BOTTOM_WORDS = /(trouser|\bpant|jean|short|chino|gurkha|denim)/i;
+
+  function wearGroup(p) {
+    var t = String(p.type || "").trim().toLowerCase();
+    if (WEAR_TOP_TYPES[t]) return "top";
+    if (WEAR_BOTTOM_TYPES[t]) return "bottom";
+    var title = String(p.title || "");
+    if (WEAR_TOP_WORDS.test(title)) return "top";
+    if (WEAR_BOTTOM_WORDS.test(title)) return "bottom";
+    return "other";
+  }
+
+  var WEAR = { top: [], bottom: [], other: [] };
+  DATA.products.forEach(function (p) { WEAR[wearGroup(p)].push(p); });
+
+  var WEAR_PAGE = 25;
+  var wearState = {
+    q: "", filter: "instock", sort: "stock",
+    shown: { top: WEAR_PAGE, bottom: WEAR_PAGE }, open: {}
+  };
+
+  function wearSorted(list) {
+    var s = wearState.sort;
+    return list.slice().sort(function (a, b) {
+      if (s === "title") return a.title.localeCompare(b.title);
+      if (s === "value") return b.value - a.value || b.stock - a.stock;
+      if (s === "d7") return b.d7 - a.d7 || b.stock - a.stock;
+      if (s === "cover") {
+        var ac = a.cover === null ? Infinity : a.cover, bc = b.cover === null ? Infinity : b.cover;
+        return ac - bc || b.stock - a.stock;
+      }
+      return b.stock - a.stock || b.d7 - a.d7;
+    });
+  }
+
+  function wearMatches(p) {
+    if (wearState.filter === "instock" && p.stock <= 0) return false;
+    var q = wearState.q.toLowerCase();
+    if (!q) return true;
+    if (p.title.toLowerCase().indexOf(q) >= 0) return true;
+    return p.variants.some(function (v) { return String(v.size).toLowerCase().indexOf(q) >= 0; });
+  }
+
+  function renderWearSide(key, tableId, noteId, moreId) {
+    var list = wearSorted(WEAR[key].filter(wearMatches));
+    var tb = document.querySelector("#" + tableId + " tbody");
+    var note = document.getElementById(noteId);
+    var more = document.getElementById(moreId);
+
+    var units = 0, value = 0;
+    list.forEach(function (p) { units += p.stock; value += p.value; });
+    note.textContent = n(list.length) + " products \u00b7 " + n(units) + " units \u00b7 " + money(value) +
+      (T.units_in_stock ? " \u00b7 " + (units / T.units_in_stock * 100).toFixed(1) + "% of all stock" : "");
+
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="4" class="empty">No products match that search.</td></tr>';
+      more.textContent = "";
+      return;
+    }
+
+    var shown = Math.min(wearState.shown[key], list.length);
+    tb.innerHTML = list.slice(0, shown).map(function (p) {
+      var open = !!wearState.open[p.id];
+      var row = '<tr class="wear-row" data-id="' + p.id + '" tabindex="0" role="button" aria-expanded="' + open + '">' +
+        '<td><div class="prod-name"><span class="caret">' + (open ? "\u25be" : "\u25b8") + "</span> " + esc(p.title) + "</div>" +
+        '<div class="prod-meta">' + esc(p.type || "uncategorised") +
+          (p.status !== "ACTIVE" ? " \u00b7 " + esc(p.status.toLowerCase()) : "") +
+          " \u00b7 " + p.sizes_in_stock + "/" + p.sizes_total + " sizes" +
+          " \u00b7 " + money(p.value) + "</div></td>" +
+        '<td class="tabular"><b>' + n(p.stock) + "</b></td>" +
+        '<td class="tabular">' + n(p.d7) + "</td>" +
+        "<td>" + coverPillCompact(p.cover) + "</td></tr>";
+      if (open) row += '<tr class="sizes-cell"><td colspan="4">' + sizeChips(p) + "</td></tr>";
+      return row;
+    }).join("");
+
+    more.textContent = list.length > shown
+      ? "Showing " + shown + " of " + n(list.length) + " products."
+      : "Showing all " + n(list.length) + " products.";
+
+    if (list.length > shown) {
+      var btn = document.createElement("button");
+      btn.className = "field";
+      btn.type = "button";
+      btn.style.marginTop = "10px";
+      btn.textContent = "Show more";
+      btn.addEventListener("click", function () { wearState.shown[key] += WEAR_PAGE; renderWear(); });
+      more.appendChild(document.createElement("br"));
+      more.appendChild(btn);
+    }
+  }
+
+  function renderWear() {
+    renderWearSide("top", "topwearTable", "topwearNote", "topwearMore");
+    renderWearSide("bottom", "bottomwearTable", "bottomwearNote", "bottomwearMore");
+    var un = WEAR.other;
+    var unUnits = un.reduce(function (s, p) { return s + p.stock; }, 0);
+    document.getElementById("wearUnclassified").textContent = un.length
+      ? un.length + " product" + (un.length === 1 ? "" : "s") + " (" + n(unUnits) +
+        " units) could not be placed in either group: " +
+        un.slice(0, 4).map(function (p) { return p.title; }).join(", ") +
+        (un.length > 4 ? " and " + (un.length - 4) + " more" : "") + "."
+      : "";
+  }
+
+  document.getElementById("wearSearch").addEventListener("input", function (e) {
+    wearState.q = e.target.value.trim();
+    wearState.shown.top = WEAR_PAGE; wearState.shown.bottom = WEAR_PAGE;
+    renderWear();
+  });
+  document.getElementById("wearSortSel").addEventListener("change", function (e) {
+    wearState.sort = e.target.value;
+    wearState.shown.top = WEAR_PAGE; wearState.shown.bottom = WEAR_PAGE;
+    renderWear();
+  });
+  document.getElementById("wearFilterSeg").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-wfilter]");
+    if (!b) return;
+    wearState.filter = b.dataset.wfilter;
+    [].forEach.call(this.querySelectorAll("button"), function (x) {
+      x.setAttribute("aria-pressed", String(x === b));
+    });
+    wearState.shown.top = WEAR_PAGE; wearState.shown.bottom = WEAR_PAGE;
+    renderWear();
+  });
+
+  function toggleWearRow(tr) {
+    wearState.open[tr.dataset.id] = !wearState.open[tr.dataset.id];
+    renderWear();
+  }
+  ["topwearTable", "bottomwearTable"].forEach(function (id) {
+    var tb = document.querySelector("#" + id + " tbody");
+    tb.addEventListener("click", function (ev) {
+      var tr = ev.target.closest(".wear-row");
+      if (tr) toggleWearRow(tr);
+    });
+    tb.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      var tr = ev.target.closest(".wear-row");
+      if (tr) { ev.preventDefault(); toggleWearRow(tr); }
+    });
+  });
+
+  document.getElementById("wearIntro").textContent =
+    "Every product placed in one of the two groups and ranked within it, so each side is read on its own terms. " +
+    "Stock as of " + dayLabel(META.inventory_as_of) + ", sales through " + dayLabel(META.run_rate_end) +
+    ". Select a row for per-size stock.";
+
+  renderWear();
 
   /* ---------- tabs ---------- */
   /* Charts measure themselves against a live box, so a chart drawn while its

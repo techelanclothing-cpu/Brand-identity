@@ -106,6 +106,8 @@ on hand** and **how fast it is selling**:
 - **Demand lost to stock-outs** — units each product likely never sold because a size was gone
 - A reorder watchlist of selling products with under 14 days of cover
 - Every product with its **per-size stock**, searchable, filterable and sortable
+- **Topwear vs. bottomwear** — the catalogue split in two and ranked by stock
+  within each side, so the two are read on their own terms
 
 ## Files
 
