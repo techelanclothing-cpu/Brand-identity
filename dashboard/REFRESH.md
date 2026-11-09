@@ -27,11 +27,13 @@ each result into `dashboard/raw/` in the shapes below, then run the two build
 scripts exactly as in Path A.
 
 **`raw/products_raw.json`** — array of Product nodes. Paginate
-`mcp__Shopify__graphql_query`; `first: 250` works and covers the catalogue in
-three calls:
+`mcp__Shopify__graphql_query`. **The API caps a connection page at 100** —
+`first: 250` is rejected with "A connection page is at most 100 here" (it used
+to work; it stopped on 5 Nov 2026). At 648 products that is **seven pages of
+100**:
 
 ```graphql
-query { products(first: 250, sortKey: ID, after: CURSOR) {
+query { products(first: 100, sortKey: ID, after: CURSOR) {
   pageInfo { hasNextPage endCursor }
   nodes { id title status productType totalInventory
           options { name }
@@ -55,13 +57,17 @@ query { shopifyqlQuery(query: "FROM sales SHOW net_items_sold GROUP BY product_v
 
 1. **ShopifyQL silently truncates at 1000 rows.** A 30-day per-variant pull
    exceeds it and returns 1000 rows with no error, dropping the most recent
-   days — exactly the ones the run rates need. Pull in **4-day chunks** and
-   treat any chunk returning 1000 rows as truncated. At current volumes a
-   10-day chunk lands near 600 rows; three chunks fit in one call as separate
-   aliases, each with its own row budget.
+   days — exactly the ones the run rates need. Pull in chunks and assert every
+   chunk came back under 1000 rows. **6-day chunks** (15 of them for a 90-day
+   window) are the current working size: at November 2026 volumes they land at
+   280–690 rows, so there is headroom without needing many more calls. Three to
+   five chunks fit in one call as separate aliases.
 2. **Always reconcile before building.** Sum `net_items_sold` per day across
    **all rows** and check it equals the store-level `daily_totals` for that day.
    If a day disagrees, the pull is incomplete — do not publish it.
+
+   Reconcile **all** the days in the window, not just the recent ones — a
+   rebuild from scratch is exactly when a chunk boundary can go wrong.
 
    Count rows whose `product_variant_id` is **null**. Shopify emits these for an
    adjustment it cannot pin to a variant, usually one since deleted. They are in
@@ -73,7 +79,10 @@ query { shopifyqlQuery(query: "FROM sales SHOW net_items_sold GROUP BY product_v
 3. **Large MCP results are written to a file instead of being returned inline.**
    That is the good case: read them with `jq`. When a result comes back inline
    and is too big to handle comfortably, re-issue the query with duplicate
-   aliases (`a:`, `b:`) to push it over the size threshold so it lands on disk.
+   aliases (`a:`, `b:`) — each carrying the **full** field set, not an ids-only
+   second copy — to push it over the size threshold so it lands on disk. A page
+   of 100 products is about 67 kB, so two full aliases clear the threshold; the
+   last short page may need three or four.
 
 ## Verifying before commit
 
@@ -100,6 +109,15 @@ EOF
 
 Then commit `inventory.html` and `inventory_data.json` to the working branch and
 push. Do not open a pull request.
+
+**Commit, push and republish as soon as the verification snippet passes — before
+any day-over-day analysis.** Between 2 and 8 Nov 2026 seven consecutive
+refreshes were built and verified on disk and then lost to worker-process
+restarts, because the analysis ran first and the restart landed before the
+commit. The published dashboard sat eight days stale as a result. `raw/` and
+`inventory_artifact.html` are gitignored, so an uncommitted refresh leaves
+nothing behind; a container recreation also wipes `raw/` entirely and the
+rebuild has to start from the counts query again.
 
 `raw/` and `inventory_artifact.html` are gitignored build outputs — both are
 regenerated on every refresh, and committing them would add about a megabyte to
